@@ -264,9 +264,16 @@ class CameraViewModel: ObservableObject {
     // This is the unique identifier for the next photo. This value must be
     // unique within a session.
     private var photoId: UInt32 = 0
+    
+    //new
+    ///exposure, white balance parameters
+    private var duration: CMTime? = AVCaptureDevice.currentExposureDuration
+    private var iso: Float? = AVCaptureDevice.currentISO
+    private var whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains? = AVCaptureDevice.currentWhiteBalanceGains
 
+    // modified
     private var photoQualityPrioritizationMode: AVCapturePhotoOutput.QualityPrioritization =
-        .quality
+        .speed
 
     private static let cameraShutterNoiseID: SystemSoundID = 1108
 
@@ -336,9 +343,11 @@ class CameraViewModel: ObservableObject {
         /// queue before starting the session queue. This ensures that UI elements can be accessed on
         /// the main thread.
         let videoPreviewLayerOrientation = session.connections[0].videoOrientation
+        //print(session.connections[0])
 
         sessionQueue.async {
             if let photoOutputConnection = self.photoOutput.connection(with: .video) {
+                //print(photoOutputConnection)
                 photoOutputConnection.videoOrientation = videoPreviewLayerOrientation
             }
             var photoSettings = AVCapturePhotoSettings()
@@ -481,6 +490,73 @@ class CameraViewModel: ObservableObject {
             setupResult = .notAuthorized
         }
     }
+    
+    //new
+    ///if the device support custom exposure mode, apply specified duration and iso, else set to locked exposure mode.
+    private func setExposure(device: AVCaptureDevice) {
+        
+        if device.isExposureModeSupported(.custom) {
+            
+            do{
+                try device.lockForConfiguration()
+                    
+                device.setExposureModeCustom(duration: self.duration!, iso: self.iso!) { (_) in
+                    logger.log("Done Exposure")
+                }
+                device.unlockForConfiguration()
+            }
+            catch{
+                logger.log("ERROR: \(String(describing: error.localizedDescription))")
+            }
+        }
+        else {
+            do{
+                try device.lockForConfiguration()
+                
+                logger.log("custom exposure mode not supported.")
+                device.exposureMode = .locked
+                
+                device.unlockForConfiguration()
+            }
+            catch{
+                logger.log("ERROR: \(String(describing: error.localizedDescription))")
+            }
+        }
+    }
+    
+    //new
+    ///if the device support locked white balance mode, apply specified white balance gains, else set to auto white balance mode.
+    private func setWhiteBalance(device: AVCaptureDevice) {
+        ///set white balance gains (locked mode)
+        let whiteBalanceGains = AVCaptureDevice.currentWhiteBalanceGains
+        
+        if device.isWhiteBalanceModeSupported(.locked) {
+            do{
+                try device.lockForConfiguration()
+                    
+                device.setWhiteBalanceModeLocked(with: self.whiteBalanceGains!) { (_) in
+                    logger.log("Done white balance")
+                }
+                device.unlockForConfiguration()
+            }
+            catch{
+                logger.log("ERROR: \(String(describing: error.localizedDescription))")
+            }
+        }
+        else {
+            do{
+                try device.lockForConfiguration()
+                    
+                logger.log("locked white balance mode not supported.")
+                device.whiteBalanceMode = .autoWhiteBalance
+                    
+                device.unlockForConfiguration()
+            }
+            catch{
+                logger.log("ERROR: \(String(describing: error.localizedDescription))")
+            }
+        }
+    }
 
     private func configureSession() {
         // Make sure setup hasn't failed.
@@ -492,12 +568,16 @@ class CameraViewModel: ObservableObject {
         // Start a new configuration and commit it.
         session.beginConfiguration()
         defer { session.commitConfiguration() }
-
+        
         session.sessionPreset = .photo
 
         do {
             let videoDeviceInput = try AVCaptureDeviceInput(
                 device: getVideoDeviceForPhotogrammetry())
+            
+            //new
+            setExposure(device: videoDeviceInput.device)
+            setWhiteBalance(device: videoDeviceInput.device)
 
             if session.canAddInput(videoDeviceInput) {
                 session.addInput(videoDeviceInput)
@@ -546,7 +626,7 @@ class CameraViewModel: ObservableObject {
             throw SessionSetupError.configurationFailed
         }
     }
-
+    
     /// This method checks for a depth-capable dual rear camera and, if found, returns an `AVCaptureDevice`.
     private func getVideoDeviceForPhotogrammetry() throws -> AVCaptureDevice {
         var defaultVideoDevice: AVCaptureDevice?
@@ -554,12 +634,17 @@ class CameraViewModel: ObservableObject {
         // Specify dual camera to get access to depth data.
         if let dualCameraDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video,
                                                           position: .back) {
-            logger.log(">>> Got back wide dual camera!")
+            logger.log(">>> Got back dual camera!")
             defaultVideoDevice = dualCameraDevice
-        } else if let backWideCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera,
+        } else if let dualWideCameraDevice = AVCaptureDevice.default(.builtInDualWideCamera,
+                                                                for: .video,
+                                                                position: .back) {
+            logger.log(">>> Got back dual wide camera!")
+            defaultVideoDevice = dualWideCameraDevice
+       } else if let backWideCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                                      for: .video,
                                                                      position: .back) {
-            logger.log(">>> Using wide back camera!")
+            logger.log(">>> Can't find a depth-capable camera: using wide back camera!")
             defaultVideoDevice = backWideCameraDevice
         }
 
