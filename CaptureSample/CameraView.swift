@@ -14,6 +14,7 @@ struct CameraView: View {
     
     @ObservedObject var model: CameraViewModel
     @State private var showInfo: Bool = false
+    @State private var showSettings: Bool = false
     
     let aspectRatio: CGFloat = 4.0 / 3.0
     let previewCornerRadius: CGFloat = 15.0
@@ -47,13 +48,21 @@ struct CameraView: View {
                     
                     VStack {
                         // The app shows this view when showInfo is true.
-                        ScanToolbarView(model: model, showInfo: $showInfo).padding(.horizontal)
+                        ScanToolbarView(model: model, showInfo: $showInfo, showSettings: $showSettings).padding(.horizontal)
                         if showInfo {
                             InfoPanelView(model: model)
                                 .padding(.horizontal).padding(.top)
                         }
                         Spacer()
                         CaptureButtonPanelView(model: model, width: geometryReader.size.width)
+                    }.popover(isPresented: $showSettings) {
+                        ZStack {
+                            
+//                            Color.blue.frame(width: 200, height: 100)
+                            SettingView(model: model)
+                            Text("Popup!")
+                        }
+                        .background(Color.black)
                     }
                 }
             }
@@ -102,6 +111,7 @@ struct CaptureButtonPanelView: View {
 struct ScanToolbarView: View {
     @ObservedObject var model: CameraViewModel
     @Binding var showInfo: Bool
+    @Binding var showSettings: Bool
     
     var body: some View {
         ZStack {
@@ -116,6 +126,14 @@ struct ScanToolbarView: View {
                     Image(systemName: "info.circle").foregroundColor(Color.blue)
                 })
                 Spacer()
+                Button(action: {
+                    print("Pressed Setting!")
+                    withAnimation {
+                        showSettings.toggle()
+                    }
+                }, label: {
+                    Image(systemName: "gear.circle").foregroundColor(Color.blue)
+                })
                 NavigationLink(destination: HelpPageView()) {
                     Image(systemName: "questionmark.circle")
                         .foregroundColor(Color.blue)
@@ -133,6 +151,7 @@ struct ScanToolbarView: View {
                     }
             }
         }
+
     }
 }
 

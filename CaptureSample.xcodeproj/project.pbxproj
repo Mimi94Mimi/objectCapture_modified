@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		11CFBD9E2BF20AB200EFC6E5 /* SettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CFBD9D2BF20AB200EFC6E5 /* SettingView.swift */; };
 		C91EEE4B25EDA200009FD603 /* CaptureFoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91EEE4A25EDA200009FD603 /* CaptureFoldersView.swift */; };
 		C91EEE4D25EDBE46009FD603 /* CaptureFolderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91EEE4C25EDBE46009FD603 /* CaptureFolderState.swift */; };
 		C94968AE25F2C24100540756 /* InfoPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C94968AD25F2C24100540756 /* InfoPanelView.swift */; };
@@ -29,6 +30,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		11CFBD9D2BF20AB200EFC6E5 /* SettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingView.swift; sourceTree = "<group>"; };
 		7BAFE7282618093500D2299C /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		7C6C99F1D4B6E3EBA3A7B7DF /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		9AEEB9169F5D7FC75E6B35A2 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
@@ -111,6 +113,7 @@
 				C9898DEB25E9806300667AE0 /* HelpPageView.swift */,
 				C9BF99A025E0808D00707ADC /* ImageLoader.swift */,
 				C94968AD25F2C24100540756 /* InfoPanelView.swift */,
+				11CFBD9D2BF20AB200EFC6E5 /* SettingView.swift */,
 				C96059EB25CA1A5E00FDB64F /* PhotoCaptureDelegate.swift */,
 				C9516AD825F085B200DA396D /* TimerView.swift */,
 				C9E38E1625C8CB5D00171AB3 /* Assets.xcassets */,
@@ -209,6 +212,7 @@
 				C9516AD925F085B200DA396D /* TimerView.swift in Sources */,
 				C91EEE4D25EDBE46009FD603 /* CaptureFolderState.swift in Sources */,
 				C9BF99A125E0808D00707ADC /* ImageLoader.swift in Sources */,
+				11CFBD9E2BF20AB200EFC6E5 /* SettingView.swift in Sources */,
 				C96059EC25CA1A5E00FDB64F /* PhotoCaptureDelegate.swift in Sources */,
 				C9898DEC25E9806300667AE0 /* HelpPageView.swift in Sources */,
 				C94968AE25F2C24100540756 /* InfoPanelView.swift in Sources */,
@@ -279,7 +283,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -333,7 +337,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
