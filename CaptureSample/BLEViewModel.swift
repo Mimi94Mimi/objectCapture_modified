@@ -4,4 +4,4 @@ class BLEViewModel: ObservableObject {
     }
 
     @Published
-}
+} 
