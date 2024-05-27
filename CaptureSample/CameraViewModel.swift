@@ -343,11 +343,9 @@ class CameraViewModel: ObservableObject {
         /// queue before starting the session queue. This ensures that UI elements can be accessed on
         /// the main thread.
         let videoPreviewLayerOrientation = session.connections[0].videoOrientation
-        //print(session.connections[0])
 
         sessionQueue.async {
             if let photoOutputConnection = self.photoOutput.connection(with: .video) {
-                //print(photoOutputConnection)
                 photoOutputConnection.videoOrientation = videoPreviewLayerOrientation
             }
             var photoSettings = AVCapturePhotoSettings()
