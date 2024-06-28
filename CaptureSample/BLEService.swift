@@ -1,70 +1,78 @@
+import CoreBluetooth
+import os
+
+private let logger = Logger(subsystem: "com.apple.sample.CaptureSample",
+                            category: "BLEService")
+
 struct CharValue {
-        var mode: String? = "fixed_angle"
-        var numOfPhoto: Int? = 5
-        var timeInterval: Float? = 1.5
-        var angle: Int? = 3
-        var cameraState: String? = "idle"
-        var shouldTakePhoto: String? = "false"
-        var connected: String? = "disconnected"
-    }
+    var mode: String = "fixed_angle"
+    var numOfPhoto: Int = 5
+    var timeInterval: Float = 1.5
+    var angle: Int = 3
+    var cameraState: String = "idle"
+    var shouldTakePhoto: String = "false"
+    var connected: String = "disconnected"
+}
     
-    struct LastCharValue {
-        var cameraState: String? = "idle"
-        var shouldTakePhoto: String? = "false"
-    }
+struct LastCharValue {
+    var cameraState: String? = "idle"
+    var shouldTakePhoto: String? = "false"
+}
 
-    struct Characteristics {
-        var modeChar: CBCharacteristic?
-        var numOfPhotoChar: CBCharacteristic?
-        var timeIntervalChar: CBCharacteristic?
-        var angleChar: CBCharacteristic?
-        var cameraStateChar: CBCharacteristic?
-        var shouldTakePhotoChar: CBCharacteristic?
-        var connectedChar: CBCharacteristic?
-    }
+struct Characteristics {
+    var modeChar: CBCharacteristic?
+    var numOfPhotoChar: CBCharacteristic?
+    var timeIntervalChar: CBCharacteristic?
+    var angleChar: CBCharacteristic?
+    var cameraStateChar: CBCharacteristic?
+    var shouldTakePhotoChar: CBCharacteristic?
+    var connectedChar: CBCharacteristic?
+}
 
-    struct CBUUIDs {
-        static let BLEService_UUID =        CBUUID(string: "187F0000-44AD-4F56-BEE4-23B6CAC3FE46")
-        static let mode_UUID =              CBUUID(string: "187F0001-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
-        static let numOfPhoto_UUID =        CBUUID(string: "187F0002-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
-        static let timeInterval_UUID =      CBUUID(string: "187F0003-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
-        static let angle_UUID =             CBUUID(string: "187F0004-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
-        static let cameraState_UUID =       CBUUID(string: "187F0005-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Read/Notify/Write)
-        static let shouldTakePhoto_UUID =   CBUUID(string: "187F0006-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Read/Notify/Write)
-        static let connected_UUID =         CBUUID(string: "187F0007-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Read/Write)
-        static let characteristic_UUIDs = [
-            mode_UUID,
-            numOfPhoto_UUID,
-            timeInterval_UUID,
-            angle_UUID,
-            cameraState_UUID,
-            shouldTakePhoto_UUID,
-            connected_UUID
-        ]
-    }
+struct CBUUIDs {
+    static let BLEService_UUID =        CBUUID(string: "187F0000-44AD-4F56-BEE4-23B6CAC3FE46")
+    static let mode_UUID =              CBUUID(string: "187F0001-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
+    static let numOfPhoto_UUID =        CBUUID(string: "187F0002-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
+    static let timeInterval_UUID =      CBUUID(string: "187F0003-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
+    static let angle_UUID =             CBUUID(string: "187F0004-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Write)
+    static let cameraState_UUID =       CBUUID(string: "187F0005-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Read/Notify/Write)
+    static let shouldTakePhoto_UUID =   CBUUID(string: "187F0006-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Read/Notify/Write)
+    static let connected_UUID =         CBUUID(string: "187F0007-44AD-4F56-BEE4-23B6CAC3FE46")// (Property = Read/Write)
+    static let characteristic_UUIDs = [
+        mode_UUID,
+        numOfPhoto_UUID,
+        timeInterval_UUID,
+        angle_UUID,
+        cameraState_UUID,
+        shouldTakePhoto_UUID,
+        connected_UUID
+    ]
+}
 
-class BLE: ObservableObject {
+class BLE: NSObject, ObservableObject {
     
     @Published var charValue: CharValue?
     @Published var lastCharValue: LastCharValue?
-    @Published var characteristics: Characteristics?
+    @Published var RPIcharacteristics: Characteristics?
 
-    @Published var isWaiting: bool = false
-    @Published var isShooting: bool = false
-    @Published var current_RSSI: Float? = 0 {
+    @Published var isWaiting: Bool = false
+    @Published var isShooting: Bool = false
+    @Published var buttonText: String = "START"
+    @Published var current_RSSI: Float = 0 {
         didSet{
             NotificationCenter.default.post(name:NSNotification.Name(rawValue: "RSSIChanged"), object: current_RSSI)
         }
     }
     //temp
-    @Published var shutter: bool = false
+    @Published var shutter: Bool = false
 
-    init() {
+    override init() {
+        super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
         
         charValue = CharValue()
         lastCharValue = LastCharValue()
-        characteristics = Characteristics()
+        RPIcharacteristics = Characteristics()
         disconnectFromDevice()
     }
 
@@ -76,9 +84,9 @@ class BLE: ObservableObject {
     
 
     private var nanosec_shooting_TI: UInt64? = 0
-    private var connectedCounterValue: Int? = 0
-    private var scanTimer = Timer()
-    private var RSSIbound: Float? = -70
+    private var connectedCounterValue: Int = 0
+    private var scanTimer: Timer?
+    private var RSSIbound: Float = -70
     
     //find peripheral
     private func connectToDevice() -> Void {
@@ -92,10 +100,9 @@ class BLE: ObservableObject {
     }
 
     private func startScanning() -> Void {
-            centralManager?.scanForPeripherals(withServices: [CBUUIDs.BLEService_UUID])
-            scanTimer.scheduledTimer(withTimeInterval: 15, repeats: false) {_ in
-                self.stopScanning()
-            }
+        centralManager?.scanForPeripherals(withServices: [CBUUIDs.BLEService_UUID])
+        scanTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) {_ in
+            self.stopScanning()
         }
     }
 
@@ -106,25 +113,26 @@ class BLE: ObservableObject {
     private func delayedConnection() -> Void {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
             //Once connected, move to new view controller to manager incoming and outgoing data
-            connectionEstablished()
+            self.connectionEstablished()
         })
     }
 
     //after connection
-    private var connectedCounter = Timer()
+    private var connectedCounter: Timer?
 
     private func connectionEstablished() {
-        writeOutgoingValue(data: "0", txChar: characteristics.connectedChar)
+        
+        writeOutgoingValue(data: "0", txChar: RPIcharacteristics?.connectedChar)
         isShooting = false
         isWaiting = false
-        connectedCounter.scheduledTimer(withTimeInterval: 0.1, repeats: true) {_ in
+        connectedCounter = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) {_ in
             self.sendCounterValue()
         }
     }
 
     private func sendCounterValue() {
-        if (current_RSSI! > RSSIbound) {
-            connectedCounterValue! += 1
+        if (current_RSSI > RSSIbound) {
+            connectedCounterValue += 1
             isWaiting = false
         }
         else {
@@ -132,42 +140,44 @@ class BLE: ObservableObject {
                 isWaiting = true
             }
         }
-        writeOutgoingValue(data: String("\(connectedCounterValue!)"), txChar: characteristics.connectedChar)
+        writeOutgoingValue(data: String("\(connectedCounterValue)"), txChar: RPIcharacteristics?.connectedChar)
     }
 
     private func handleCameraState(value: String) -> Void{
-       if (value != lastCharValue.cameraState){
+       if (value != lastCharValue?.cameraState){
             print("camera state changes: \(value)")
-            lastCharValue.cameraState = value
+            lastCharValue?.cameraState = value
+            charValue?.cameraState = value
             if (value == "idle") {
                 isShooting = false
                 nanosec_shooting_TI = 0
             }
-            else if (lastCharValue.cameraState == "shooting") {
+            else if (lastCharValue?.cameraState == "shooting") {
             }
         }
     }
 
-    private func handleNotifyShouldTakePhoto(value: String) -> Void{
-        if(value != lastCharValue.shouldTakePhoto){
-            lastCharValue.shouldTakePhoto = value
-            if (lastCharValue.shouldTakePhoto == "false") {
-                charValue.shouldTakePhoto = "false"
+    private func handleShouldTakePhoto(value: String) -> Void{
+        if(value != lastCharValue?.shouldTakePhoto){
+            lastCharValue?.shouldTakePhoto = value
+            if (lastCharValue?.shouldTakePhoto == "false") {
+                charValue?.shouldTakePhoto = "false"
             }
-            else if (lastCharValue.shouldTakePhoto == "true") {
+            else if (lastCharValue?.shouldTakePhoto == "true") {
                 takePhoto()
-                writeOutgoingValue(data: "false" , txChar: characteristics.shouldTakePhotoChar)
-                charValue.shouldTakePhoto = "true"
+                writeOutgoingValue(data: "false" , txChar: RPIcharacteristics?.shouldTakePhotoChar)
+                charValue?.shouldTakePhoto = "true"
             }
         }
-    }   
+    }
 
     private func takePhoto(){
-        shutter = true
+        logger.log("take a photo")
+        self.shutter = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            shutter = false
+            self.shutter = false
         }
-        if (charValue.mode == "fixed_time_interval") {
+        if (charValue?.mode == "fixed_time_interval") {
             if(nanosec_shooting_TI != 0){
                 let time_after = Double(DispatchTime.now().uptimeNanoseconds - nanosec_shooting_TI!) / Double(1000000000)
                 nanosec_shooting_TI = DispatchTime.now().uptimeNanoseconds
@@ -179,18 +189,76 @@ class BLE: ObservableObject {
         }
     }
 
-    private func writeOutgoingValue(data: String, txChar: CBCharacteristic?){
+    func writeOutgoingValue(data: String, txChar: CBCharacteristic?){
         let valueString = (data as NSString).data(using: String.Encoding.utf8.rawValue)
         //change the "data" to valueString
         if RPIperipheral != nil {
             if let txCharacteristic = txChar {
-                RPIperipheral.writeValue(valueString!, for: txCharacteristic, type: CBCharacteristicWriteType.withResponse)
+                RPIperipheral?.writeValue(valueString!, for: txCharacteristic, type: CBCharacteristicWriteType.withResponse)
             }
+        }
+    }
+    
+    // View objects actions
+    func modeCtrlAction(_ text: String) {
+        charValue?.mode = text
+        print("mode -> \(String(text))")
+        writeOutgoingValue(data: text, txChar: RPIcharacteristics?.modeChar)
+    }
+    
+    func numOfPhotoTFAction(_ text: String) -> String {
+        guard let input = Int(text) else {
+            return "Value error"
+        }
+        if input < 1 || input > 200 {
+            return "Invalid value"
+        }
+        charValue?.numOfPhoto = input
+        print("numofphoto -> \(String(input))")
+        writeOutgoingValue(data: text, txChar: RPIcharacteristics?.numOfPhotoChar)
+        return "Success"
+    }
+
+    func angleTFAction(_ text: String) -> String {
+        guard let input = Int(text) else {
+            return "Value error"
+        }
+        if input < 1 || input > 45 {
+            return "Invalid value"
+        }
+        charValue?.angle = input
+        print("angle -> \(String(input))")
+        writeOutgoingValue(data: text, txChar: RPIcharacteristics?.angleChar)
+        return "Success"
+    }
+    
+    func timeIntervalTFAction(_ text: String) -> String {
+        guard let input = Float(text) else {
+            return "Value error"
+        }
+        if input < 0.2 || input > 20.0 {
+            return "Invalid value"
+        }
+        charValue?.timeInterval = input
+        print("angle -> \(String(format: "%.2f", input))")
+        writeOutgoingValue(data: text, txChar: RPIcharacteristics?.timeIntervalChar)
+        return "Success"
+    }
+    
+    func cameraButtonAction() {
+        print("cb action")
+        if (charValue?.cameraState == "idle") {
+            writeOutgoingValue(data: "shooting", txChar: RPIcharacteristics?.cameraStateChar)
+            charValue?.cameraState = "shooting"
+        }
+        else if (charValue?.cameraState == "shooting") {
+            //BLE_manager.writeOutgoingValue(data: "idle", txChar: BLE_manager.RPIcharacteristics?.cameraStateChar)
+            charValue?.cameraState = "idle"
         }
     }
 
     private func didcloseAPP() {
-        writeOutgoingValue(data: "disconnected" , txChar: characteristics.connectedChar)
+        writeOutgoingValue(data: "disconnected" , txChar: RPIcharacteristics?.connectedChar)
     }
 
     deinit {
@@ -204,7 +272,7 @@ extension BLE: CBCentralManagerDelegate {
         switch central.state {
             case .poweredOff:
                 print("Is Powered Off.")
-                BLEViewModel.bluetoothAlert();
+                //BLEViewModel.bluetoothAlert();
             case .poweredOn:
                 print("Is Powered On.")
                 startScanning()
@@ -226,16 +294,17 @@ extension BLE: CBCentralManagerDelegate {
             print("Function: \(#function),Line: \(#line)")
 
             RPIperipheral = peripheral
-            RPIperipheral.delegate = self
+            RPIperipheral?.delegate = self
 
             print("Peripheral Discovered: \(peripheral)")
             print ("Advertisement Data : \(advertisementData)")
+            connectToDevice()
         }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         stopScanning()
-        RPIperipheral.discoverServices([CBUUIDs.BLEService_UUID])
+        RPIperipheral?.discoverServices([CBUUIDs.BLEService_UUID])
         peripheral.readRSSI()
     }
 
@@ -247,7 +316,7 @@ extension BLE: CBPeripheralDelegate {
         for service in services {
             peripheral.discoverCharacteristics(nil, for: service)
         }
-        RPIperipheral.connectedService = services[0]
+        cameraService = services[0]
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
@@ -263,32 +332,32 @@ extension BLE: CBPeripheralDelegate {
                 print("Characteristic: \(characteristic.uuid.uuidString) has been found.")
                 switch characteristic.uuid {
                     case CBUUIDs.mode_UUID:
-                        characteristics.modeChar = characteristic
-                        break
+                    RPIcharacteristics?.modeChar = characteristic
+                    break
                     case CBUUIDs.numOfPhoto_UUID:
-                        characteristics.numOfPhotoChar = characteristic
-                        break
+                    RPIcharacteristics?.numOfPhotoChar = characteristic
+                    break
                     case CBUUIDs.timeInterval_UUID:
-                        characteristics.timeIntervalChar = characteristic
-                        break
+                    RPIcharacteristics?.timeIntervalChar = characteristic
+                    break
                     case CBUUIDs.angle_UUID:
-                        characteristics.angleChar = characteristic
-                        break
+                    RPIcharacteristics?.angleChar = characteristic
+                    break
                     case CBUUIDs.cameraState_UUID:
-                        characteristics.cameraStateChar = characteristic
-                        peripheral.readValue(for: characteristics.cameraStateChar!)
-                        peripheral.setNotifyValue(true, for: characteristics.cameraStateChar!)
-                        break
+                    RPIcharacteristics?.cameraStateChar = characteristic
+                    peripheral.readValue(for: characteristic)
+                    peripheral.setNotifyValue(true, for: characteristic)
+                    break
                     case CBUUIDs.shouldTakePhoto_UUID:
-                        characteristics.shouldTakePhotoChar = characteristic
-                        peripheral.readValue(for: characteristics.shouldTakePhotoChar!)
-                        peripheral.setNotifyValue(true, for: characteristics.shouldTakePhotoChar!)
-                        break
+                    RPIcharacteristics?.shouldTakePhotoChar = characteristic
+                    peripheral.readValue(for: characteristic)
+                    peripheral.setNotifyValue(true, for: characteristic)
+                    break
                     case CBUUIDs.connected_UUID:
-                        characteristics.connectedChar = characteristic
-                        break
+                    RPIcharacteristics?.connectedChar = characteristic
+                    break
                     default:
-                        break
+                    break
                 }
             }
         }
@@ -296,27 +365,26 @@ extension BLE: CBPeripheralDelegate {
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-
         var characteristicASCIIValue = NSString()
 
-        guard characteristic == characteristics.cameraStateChar || characteristic == characteristics.shouldTakePhotoChar,
+        guard characteristic == RPIcharacteristics?.cameraStateChar || characteristic == RPIcharacteristics?.shouldTakePhotoChar,
         let charValue = characteristic.value,
         let ASCIIstring = NSString(data: charValue, encoding: String.Encoding.utf8.rawValue) else { return }
 
         characteristicASCIIValue = ASCIIstring
         
-        if (characteristic.isEqual(characteristics.cameraStateChar)){
-            handleCameraState("\((characteristicASCIIValue as String))")
+        if (characteristic.isEqual(RPIcharacteristics?.cameraStateChar)){
+            handleCameraState(value: "\((characteristicASCIIValue as String))")
         }
-        if (characteristic.isEqual(characteristics.shouldTakePhotoChar)){
-            handleShouldTakePhoto("\((characteristicASCIIValue as String))")
+        if (characteristic.isEqual(RPIcharacteristics?.shouldTakePhotoChar)){
+            handleShouldTakePhoto(value: "\((characteristicASCIIValue as String))")
         }
         
     }
 
     func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         current_RSSI = RSSI.floatValue
-        RPIperipheral.readRSSI()
+        RPIperipheral?.readRSSI()
     }
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
@@ -343,7 +411,7 @@ extension BLE: CBPeripheralDelegate {
     }
 }
 
-extension ConsoleViewController: CBPeripheralManagerDelegate {
+extension BLE: CBPeripheralManagerDelegate {
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         switch peripheral.state {
         case .poweredOn:
