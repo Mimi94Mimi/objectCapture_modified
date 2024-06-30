@@ -14,8 +14,11 @@ private let logger = Logger(subsystem: "com.apple.sample.CaptureSample",
                             category: "BLEOptionsView")
 
 struct BLEOptionsView: View {
+    @ObservedObject var model: CameraViewModel
     @ObservedObject var BLE_manager: BLE
-    init(_ BLE_manager: BLE){
+    
+    init(model: CameraViewModel, BLE_manager: BLE){
+        self.model = model
         self.BLE_manager = BLE_manager
     }
 
@@ -25,12 +28,12 @@ struct BLEOptionsView: View {
             Color(red: 0, green: 0, blue: 0.01, opacity: 1.0)
                 .edgesIgnoringSafeArea(/*@START_MENU_TOKEN@*/.all/*@END_MENU_TOKEN@*/)
             VStack(){
-                modeView(BLE_manager)
+                modeView(model, BLE_manager)
                 numOfPhotoView(BLE_manager)
                 angleView(BLE_manager)
                 timeIntervalView(BLE_manager)
                 Spacer()
-                shutterPanelView(BLE_manager)
+                //shutterPanelView(BLE_manager)
             }
             .padding(.horizontal, 10.0)
         }
@@ -38,6 +41,7 @@ struct BLEOptionsView: View {
 }
 
 class SelectedIndex: ObservableObject{
+    @ObservedObject var model: CameraViewModel
     @ObservedObject var BLE_manager: BLE
     @Published var index: Int = 1 {
         didSet{
@@ -51,22 +55,25 @@ class SelectedIndex: ObservableObject{
             }
         }
     }
-    init(_ BLE_manager: BLE, _ index: Int){
+    init(_ model: CameraViewModel, _ BLE_manager: BLE, _ index: Int){
+        self.model = model
         self.BLE_manager = BLE_manager
         self.index = index
     }
 }
 
 struct modeView: View {
+    @ObservedObject var model: CameraViewModel
     @ObservedObject var BLE_manager: BLE
     @StateObject var selectedIndex: SelectedIndex
     
-    init(_ BLE_manager: BLE){
+    init(_ model: CameraViewModel, _ BLE_manager: BLE){
         UISegmentedControl.appearance().selectedSegmentTintColor = .white
         UISegmentedControl.appearance().backgroundColor = .lightGray
+        self.model = model
         self.BLE_manager = BLE_manager
         let init_index = BLE_manager.charValue?.mode == "fixed_angle" ? 1 : 2
-        self._selectedIndex = StateObject(wrappedValue: SelectedIndex(BLE_manager, init_index))
+        self._selectedIndex = StateObject(wrappedValue: SelectedIndex(model, BLE_manager, init_index))
     }
     
     var body: some View {
@@ -97,8 +104,8 @@ struct modeView: View {
 }
 
 struct numOfPhotoView: View {
-    @State private var value = "5"
-    @State private var prevValue = "5"
+    @State private var value: String
+    @State private var prevValue: String
     @ObservedObject var BLE_manager: BLE
     @State var showAlert = false
     @State var errorMsg = ""
@@ -106,6 +113,8 @@ struct numOfPhotoView: View {
     init(_ BLE_manager: BLE){
         UITextField.appearance().backgroundColor = .lightGray
         self.BLE_manager = BLE_manager
+        self.value = String(BLE_manager.charValue!.numOfPhoto)
+        self.prevValue = String(BLE_manager.charValue!.numOfPhoto)
     }
     
     func textfieldAlert(_ error: String) -> Alert? {
@@ -181,8 +190,8 @@ struct numOfPhotoView: View {
 }
 
 struct angleView: View {
-    @State private var value = "3"
-    @State private var prevValue = "3"
+    @State private var value: String
+    @State private var prevValue: String
     @ObservedObject var BLE_manager: BLE
     @State var showAlert = false
     @State var errorMsg = ""
@@ -190,6 +199,8 @@ struct angleView: View {
     init(_ BLE_manager: BLE){
         UITextField.appearance().backgroundColor = .lightGray
         self.BLE_manager = BLE_manager
+        self.value = String(BLE_manager.charValue!.angle)
+        self.prevValue = String(BLE_manager.charValue!.angle)
     }
     
     func textfieldAlert(_ error: String) -> Alert? {
@@ -265,8 +276,8 @@ struct angleView: View {
 }
 
 struct timeIntervalView: View {
-    @State private var value = "1"
-    @State private var prevValue = "1"
+    @State private var value: String
+    @State private var prevValue: String
     @ObservedObject var BLE_manager: BLE
     @State var showAlert = false
     @State var errorMsg = ""
@@ -274,6 +285,8 @@ struct timeIntervalView: View {
     init(_ BLE_manager: BLE){
         UITextField.appearance().backgroundColor = .lightGray
         self.BLE_manager = BLE_manager
+        self.value = String(BLE_manager.charValue!.timeInterval)
+        self.prevValue = String(BLE_manager.charValue!.timeInterval)
     }
     func textfieldAlert(_ error: String) -> Alert? {
         if(error == "Value error"){

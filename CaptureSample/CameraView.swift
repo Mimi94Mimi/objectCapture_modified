@@ -14,6 +14,15 @@ struct CameraView: View {
     
     @ObservedObject var model: CameraViewModel
     @State private var showInfo: Bool = false
+    //TODO(BLE)
+    @ObservedObject var BLE_manager: BLE
+    @State private var showBLESettings: Bool = false {
+        didSet{
+            if(!showBLESettings){
+                model.commitBLESettings()
+            }
+        }
+    }
     
     let aspectRatio: CGFloat = 4.0 / 3.0
     let previewCornerRadius: CGFloat = 15.0
@@ -47,15 +56,33 @@ struct CameraView: View {
                     
                     VStack {
                         // The app shows this view when showInfo is true.
-                        ScanToolbarView(model: model, showInfo: $showInfo).padding(.horizontal)
+                        ScanToolbarView(model: model, showInfo: $showInfo, showBLESettings: $showBLESettings).padding(.horizontal)
                         if showInfo {
                             InfoPanelView(model: model)
                                 .padding(.horizontal).padding(.top)
                         }
                         Spacer()
-                        CaptureButtonPanelView(model: model, width: geometryReader.size.width)
+                        //TODO(BLE)
+                        CaptureButtonPanelView(model: model, width: geometryReader.size.width, BLE_manager: BLE_manager)
+                    }.popover(isPresented: $showBLESettings) {
+                        ZStack {
+                            BLEOptionsView(model: model, BLE_manager: BLE_manager)
+                        }
                     }
+                    
+                    //TODO(BLE)
+                    if(BLE_manager.isWaiting){
+                        ProgressView() {
+                            Text("waiting for connection...")
+                                .font(.title)
+                                .padding(.top, 10.0)
+                        }
+                        .frame(width: geometryReader.size.width, height: geometryReader.size.height)
+                        .background(Color(red: 0.5, green: 0.5, blue: 0.5, opacity: 0.3))
+                    }
+                    
                 }
+                
             }
             .navigationTitle(Text("Scan"))
             .navigationBarTitle("Scan")
@@ -71,6 +98,8 @@ struct CaptureButtonPanelView: View {
     
     /// This property stores the full width of the bar. The view uses this to place items.
     var width: CGFloat
+    //TODO(BLE)
+    @ObservedObject var BLE_manager: BLE
     
     var body: some View {
         // Add the bottom panel, which contains the thumbnail and capture button.
@@ -83,14 +112,21 @@ struct CaptureButtonPanelView: View {
             }
             HStack {
                 Spacer()
-                CaptureButton(model: model)
+                //TODO(BLE)
+                CaptureButton(model: model, BLE_manager: BLE_manager)
                 Spacer()
             }
             HStack {
                 Spacer()
-                CaptureModeButton(model: model,
-                                  frameWidth: width / 3)
-                    .padding(.horizontal)
+                VStack{
+                    //TODO(BLE)
+//                    CaptureModeButton(model: model,
+//                                      frameWidth: width / 3)
+//                        .padding(.horizontal)
+                    Text("RSSI: \(Int(BLE_manager.current_RSSI))")
+                    Text("photos left: \(BLE_manager.charValue!.numOfPhoto)")
+                }
+                .padding(.trailing, 20.0)
             }
         }
     }
@@ -102,6 +138,7 @@ struct CaptureButtonPanelView: View {
 struct ScanToolbarView: View {
     @ObservedObject var model: CameraViewModel
     @Binding var showInfo: Bool
+    @Binding var showBLESettings: Bool
     
     var body: some View {
         ZStack {
@@ -116,6 +153,14 @@ struct ScanToolbarView: View {
                     Image(systemName: "info.circle").foregroundColor(Color.blue)
                 })
                 Spacer()
+                Button(action: {
+                                    print("Pressed Setting!")
+                                    withAnimation {
+                                        showBLESettings.toggle()
+                                    }
+                                }, label: {
+                                    Image(systemName: "gear.circle").foregroundColor(Color.blue)
+                                })
                 NavigationLink(destination: HelpPageView()) {
                     Image(systemName: "questionmark.circle")
                         .foregroundColor(Color.blue)
@@ -149,21 +194,42 @@ struct CaptureButton: View {
         CaptureButton.innerPadding
     
     @ObservedObject var model: CameraViewModel
+    //TODO(BLE)
+    @ObservedObject var BLE_manager: BLE
     
-    init(model: CameraViewModel) {
+    //TODO(BLE)
+    init(model: CameraViewModel, BLE_manager: BLE) {
         self.model = model
+        self.BLE_manager = BLE_manager
     }
     
+    //TODO(BLE)
     var body: some View {
         Button(action: {
-            model.captureButtonPressed()
+            model.BLEcaptureButtonPressed()
         }, label: {
-            if model.isAutoCaptureActive {
-                AutoCaptureButtonView(model: model)
+            if (BLE_manager.charValue?.mode == "fixed_time_interval"){
+                FixedTimeIntervalCaptureButtonView(model: model, BLE_manager: BLE_manager)
             } else {
-                ManualCaptureButtonView()
+                FixedAngleCaptureButtonView(model: model, BLE_manager: BLE_manager)
             }
         }).disabled(!model.isCameraAvailable || !model.readyToCapture)
+        
+//        Button(action: {
+//            model.captureButtonPressed()
+//        }, label: {
+//            AutoCaptureButtonView(model: model)
+//        }).disabled(!model.isCameraAvailable || !model.readyToCapture)
+        
+//        Button(action: {
+//            
+//        }, label: {
+//            if model.isAutoCaptureActive {
+//                AutoCaptureButtonView(model: model)
+//            } else {
+//                ManualCaptureButtonView()
+//            }
+//        }).disabled(!model.isCameraAvailable || !model.readyToCapture)
     }
 }
 
@@ -198,6 +264,70 @@ struct ManualCaptureButtonView: View {
                 .frame(width: CaptureButton.innerDiameter,
                        height: CaptureButton.innerDiameter,
                        alignment: .center)
+        }
+    }
+}
+
+//TODO(BLE)
+/// This is a helper view for the `CaptureButton`. It implements the shape for fixed time interval mode.
+struct FixedTimeIntervalCaptureButtonView: View {
+    @ObservedObject var model: CameraViewModel
+    @ObservedObject var BLE_manager: BLE
+    
+    var body: some View {
+        ZStack {
+            if (!model.isCountingDown){
+                Circle()
+                    .foregroundColor(Color.primary)
+                    .frame(width: CaptureButton.innerDiameter,
+                           height: CaptureButton.innerDiameter,
+                           alignment: .center)
+                    .cornerRadius(5)
+                Text("T")
+                    .font(.largeTitle)
+                    .foregroundColor(Color.black)
+                    .frame(width: CaptureModeButton.toggleDiameter,
+                           height: CaptureModeButton.toggleDiameter,
+                           alignment: .center)
+            } else {
+                Circle()
+                    .foregroundColor(Color.red)
+                    .frame(width: CaptureButton.innerDiameter,
+                           height: CaptureButton.innerDiameter,
+                           alignment: .center)
+                    .cornerRadius(5)
+                Text("\(Int(model.countDownValue))")
+                    .font(.largeTitle)
+                    .foregroundColor(Color.white)
+                    .frame(width: CaptureModeButton.toggleDiameter,
+                           height: CaptureModeButton.toggleDiameter,
+                           alignment: .center)
+            }
+            BLEProgressingView(model: model, diameter: CaptureButton.outerDiameter, BLE_manager: BLE_manager)
+        }
+    }
+}
+
+/// This is a helper view for the `CaptureButton`. It implements the shape for fixed angle mode.
+struct FixedAngleCaptureButtonView: View {
+    @ObservedObject var model: CameraViewModel
+    @ObservedObject var BLE_manager: BLE
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .foregroundColor(Color.primary)
+                .frame(width: CaptureButton.innerDiameter,
+                       height: CaptureButton.innerDiameter,
+                       alignment: .center)
+                .cornerRadius(5)
+            Text("A")
+                .font(.largeTitle)
+                .foregroundColor(Color.black)
+                .frame(width: CaptureModeButton.toggleDiameter,
+                       height: CaptureModeButton.toggleDiameter,
+                       alignment: .center)
+            BLEProgressingView(model: model, diameter: CaptureButton.outerDiameter, BLE_manager: BLE_manager)
         }
     }
 }
@@ -329,5 +459,14 @@ struct ThumbnailImageView: View {
             .overlay(RoundedRectangle(cornerRadius: thumbnailFrameCornerRadius)
                         .stroke(Color.primary, lineWidth: thumbnailStrokeWidth))
             .shadow(radius: 10)
+    }
+}
+
+//TODO(PREVIEW)
+struct CameraView_Previews: PreviewProvider {
+    @StateObject private static var model = CameraViewModel()
+    @StateObject private static var BLE_manager = BLE()
+    static var previews: some View {
+        ContentView(model: model, BLE_manager: BLE_manager)
     }
 }

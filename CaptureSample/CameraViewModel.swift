@@ -18,6 +18,7 @@ private let logger = Logger(subsystem: "com.apple.sample.CaptureSample",
 /// This is a SwiftUI observable data model class that holds all of the app's state and handles all changes
 /// to that state. The app's views observe this object and update themseves to reflect changes.
 class CameraViewModel: ObservableObject {
+    @StateObject var BLE_manager = BLE()
     var session: AVCaptureSession
 
     enum CaptureMode {
@@ -91,6 +92,8 @@ class CameraViewModel: ObservableObject {
     /// If `isAutoCaptureActive` is `true`, this property contains the number of seconds until the
     /// next capture trigger.
     @Published var timeUntilCaptureSecs: Double = 0
+    
+    @Published var countDownValue: Double = 0
 
     var autoCaptureIntervalSecs: Double = 0
 
@@ -111,10 +114,10 @@ class CameraViewModel: ObservableObject {
 
     init() {
         session = AVCaptureSession()
-
         // This is an asynchronous call that begins all setup. It sets
         // up the camera device, motion device (gravity), and ensures correct
         // permissions.
+        
         startSetup()
     }
 
@@ -128,6 +131,40 @@ class CameraViewModel: ObservableObject {
         case .automatic(_):
             captureMode = .manual
         }
+    }
+    
+    //TODO(BLE)
+    func commitBLESettings(){
+        dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+        switch BLE_manager.charValue!.mode {
+        case "fixed_time_interval":
+            triggerEveryTimer = TriggerEveryTimer(
+                triggerEvery: BLE_manager.charValue!.timeInterval,
+                onTrigger: {
+                    self.capturePhotoAndMetadata()
+                },
+                updateEvery: 1.0 / 30.0,  // 30 fps.
+                onUpdate: { timeLeft in
+                    self.timeUntilCaptureSecs = timeLeft
+                })
+        case "fixed_angle":
+            captureMode = .manual
+        default:
+            logger.log("cannot handle BLEModeChange. ")
+        }
+    }
+    
+    func setCountDownTimer(){
+        self.countDownValue = 3
+        self.countDownTimer = TriggerEveryTimer(
+            triggerEvery: 1.0,
+            onTrigger: {
+                self.countDownValue -= 1
+            },
+            updateEvery: 1.0 / 30.0,  // 30 fps.
+            onUpdate: { timeLeft in
+                self.timeUntilCaptureSecs = timeLeft
+            })
     }
 
     /// When the user presses the capture button, this method is called.
@@ -144,6 +181,21 @@ class CameraViewModel: ObservableObject {
             } else {
                 startAutomaticCapture()
             }
+        }
+    }
+    
+    @Published var isCountingDown: Bool = false
+    func BLEcaptureButtonPressed() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        switch BLE_manager.charValue?.mode {
+        case "fixed_angle":
+            logger.log("BLEcaptureButtonPressed fixed_angle")
+        case "fixed_time_interval":
+            precondition(countDownTimer != nil)
+            countDownTimer?.start()
+            isCountingDown = true
+        default:
+            logger.log("cannot handle BLEcaptureButtonPressed")
         }
     }
 
@@ -230,6 +282,8 @@ class CameraViewModel: ObservableObject {
                 self.isMotionDataEnabled = false
             }
         }
+        
+        self.setCountDownTimer()
     }
 
     func startSession() {
@@ -332,6 +386,9 @@ class CameraViewModel: ObservableObject {
     /// This helper class is used during automatic mode to trigger image captures.  When the app is in
     /// manual mode, it's `nil`.
     private var triggerEveryTimer: TriggerEveryTimer? = nil
+    
+    //TODO(BLE)
+    private var countDownTimer: TriggerEveryTimer? = nil
 
     // MARK: - Private Functions
 

@@ -7,7 +7,7 @@ private let logger = Logger(subsystem: "com.apple.sample.CaptureSample",
 struct CharValue {
     var mode: String = "fixed_angle"
     var numOfPhoto: Int = 5
-    var timeInterval: Float = 1.5
+    var timeInterval: Double = 1.5
     var angle: Int = 3
     var cameraState: String = "idle"
     var shouldTakePhoto: String = "false"
@@ -55,14 +55,10 @@ class BLE: NSObject, ObservableObject {
     @Published var lastCharValue: LastCharValue?
     @Published var RPIcharacteristics: Characteristics?
 
-    @Published var isWaiting: Bool = false
+    @Published var isWaiting: Bool = true
     @Published var isShooting: Bool = false
     @Published var buttonText: String = "START"
-    @Published var current_RSSI: Float = 0 {
-        didSet{
-            NotificationCenter.default.post(name:NSNotification.Name(rawValue: "RSSIChanged"), object: current_RSSI)
-        }
-    }
+    @Published var current_RSSI: Float = 0
     //temp
     @Published var shutter: Bool = false
 
@@ -124,7 +120,7 @@ class BLE: NSObject, ObservableObject {
         
         writeOutgoingValue(data: "0", txChar: RPIcharacteristics?.connectedChar)
         isShooting = false
-        isWaiting = false
+        isWaiting = true
         connectedCounter = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) {_ in
             self.sendCounterValue()
         }
@@ -233,7 +229,7 @@ class BLE: NSObject, ObservableObject {
     }
     
     func timeIntervalTFAction(_ text: String) -> String {
-        guard let input = Float(text) else {
+        guard let input = Double(text) else {
             return "Value error"
         }
         if input < 0.2 || input > 20.0 {
@@ -305,6 +301,7 @@ extension BLE: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         stopScanning()
         RPIperipheral?.discoverServices([CBUUIDs.BLEService_UUID])
+        logger.log("start reading RSSI")
         peripheral.readRSSI()
     }
 

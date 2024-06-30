@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		9449E6DB2C2EB2EC00F49BDC /* BLEOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9449E6DA2C2EB2EC00F49BDC /* BLEOptionsView.swift */; };
 		9449E6DD2C2EB3D100F49BDC /* BLEService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9449E6DC2C2EB3D100F49BDC /* BLEService.swift */; };
+		94E6401F2C3107D500982CF8 /* BLEProgressingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E6401E2C3107D500982CF8 /* BLEProgressingView.swift */; };
 		C91EEE4B25EDA200009FD603 /* CaptureFoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91EEE4A25EDA200009FD603 /* CaptureFoldersView.swift */; };
 		C91EEE4D25EDBE46009FD603 /* CaptureFolderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91EEE4C25EDBE46009FD603 /* CaptureFolderState.swift */; };
 		C94968AE25F2C24100540756 /* InfoPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C94968AD25F2C24100540756 /* InfoPanelView.swift */; };
@@ -35,6 +36,7 @@
 		7C6C99F1D4B6E3EBA3A7B7DF /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		9449E6DA2C2EB2EC00F49BDC /* BLEOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEOptionsView.swift; sourceTree = "<group>"; };
 		9449E6DC2C2EB3D100F49BDC /* BLEService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEService.swift; sourceTree = "<group>"; };
+		94E6401E2C3107D500982CF8 /* BLEProgressingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEProgressingView.swift; sourceTree = "<group>"; };
 		9AEEB9169F5D7FC75E6B35A2 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
 		C91EEE4A25EDA200009FD603 /* CaptureFoldersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFoldersView.swift; sourceTree = "<group>"; };
 		C91EEE4C25EDBE46009FD603 /* CaptureFolderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFolderState.swift; sourceTree = "<group>"; };
@@ -101,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				C9BA144425EF052300A19324 /* AsyncImageHelpers.swift */,
+				94E6401E2C3107D500982CF8 /* BLEProgressingView.swift */,
 				9449E6DA2C2EB2EC00F49BDC /* BLEOptionsView.swift */,
 				9449E6DC2C2EB3D100F49BDC /* BLEService.swift */,
 				C96059EE25CA1FB100FDB64F /* CameraViewModel.swift */,
@@ -224,6 +227,7 @@
 				C9BF999E25E07A5200707ADC /* CaptureGalleryView.swift in Sources */,
 				C9E38E1525C8CB5B00171AB3 /* ContentView.swift in Sources */,
 				C9BA144525EF052300A19324 /* AsyncImageHelpers.swift in Sources */,
+				94E6401F2C3107D500982CF8 /* BLEProgressingView.swift in Sources */,
 				C9605AE525CCB8D800FDB64F /* CameraView.swift in Sources */,
 				C9516ADB25F090FE00DA396D /* TriggerEveryTimer.swift in Sources */,
 				C9605AE925CCCD1200FDB64F /* Capture.swift in Sources */,

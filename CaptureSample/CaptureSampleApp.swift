@@ -20,15 +20,15 @@ import SwiftUI
 //    }
 //}
 
+//TODO(BLE)
 @main
 struct CaptureSampleApp: App {
-    @StateObject var BLE_manager = BLE()
-    
+    @StateObject var model = CameraViewModel()
+    @StateObject var BLEmodel = BLE()
     
     var body: some Scene {
         WindowGroup {
-            //ContentView(model: model)
-            BLEOptionsView(BLE_manager)
+            ContentView(model: model, BLE_manager: model.BLE_manager)
         }
     }
 }
