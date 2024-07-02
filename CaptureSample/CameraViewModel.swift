@@ -18,7 +18,9 @@ private let logger = Logger(subsystem: "com.apple.sample.CaptureSample",
 /// This is a SwiftUI observable data model class that holds all of the app's state and handles all changes
 /// to that state. The app's views observe this object and update themseves to reflect changes.
 class CameraViewModel: ObservableObject {
-    @StateObject var BLE_manager = BLE()
+    //TODO(BLE)
+    @ObservedObject var BLE_manager: BLE
+    
     var session: AVCaptureSession
 
     enum CaptureMode {
@@ -106,18 +108,22 @@ class CameraViewModel: ObservableObject {
     var captureDir: URL? {
         return captureFolderState?.captureDir
     }
+    
+    var lastShouldTakePhoto: Bool = false
+    var calls: Int = 0
 
     static let maxPhotosAllowed = 250
     static let recommendedMinPhotos = 30
     static let recommendedMaxPhotos = 200
     static let defaultAutomaticCaptureIntervalSecs: Double = 3.0
-
-    init() {
+    
+    //TODO(BLE)
+    init(BLE_manager _BLE_manager: BLE) {
         session = AVCaptureSession()
         // This is an asynchronous call that begins all setup. It sets
         // up the camera device, motion device (gravity), and ensures correct
         // permissions.
-        
+        self.BLE_manager = _BLE_manager
         startSetup()
     }
 
@@ -138,19 +144,20 @@ class CameraViewModel: ObservableObject {
         dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
         switch BLE_manager.charValue!.mode {
         case "fixed_time_interval":
-            triggerEveryTimer = TriggerEveryTimer(
-                triggerEvery: BLE_manager.charValue!.timeInterval,
-                onTrigger: {
-                    self.capturePhotoAndMetadata()
-                },
-                updateEvery: 1.0 / 30.0,  // 30 fps.
-                onUpdate: { timeLeft in
-                    self.timeUntilCaptureSecs = timeLeft
-                })
+//            triggerEveryTimer = TriggerEveryTimer(
+//                triggerEvery: BLE_manager.charValue!.timeInterval,
+//                onTrigger: {
+//                    self.capturePhotoAndMetadata()
+//                },
+//                updateEvery: 1.0 / 30.0,  // 30 fps.
+//                onUpdate: { timeLeft in
+//                    self.timeUntilCaptureSecs = timeLeft
+//                })
+            logger.log("fixed_time_interval commitBLESettings")
         case "fixed_angle":
             captureMode = .manual
         default:
-            logger.log("cannot handle BLEModeChange. ")
+            logger.log("cannot handle commitBLESettings. ")
         }
     }
     
@@ -159,7 +166,13 @@ class CameraViewModel: ObservableObject {
         self.countDownTimer = TriggerEveryTimer(
             triggerEvery: 1.0,
             onTrigger: {
-                self.countDownValue -= 1
+                if(self.countDownValue - 1 > 0){
+                    self.countDownValue = self.countDownValue - 1
+                } else {
+                    self.countDownTimer?.stop()
+                    self.setCountDownTimer()
+                    self.isCountingDown = false
+                }
             },
             updateEvery: 1.0 / 30.0,  // 30 fps.
             onUpdate: { timeLeft in
@@ -187,6 +200,7 @@ class CameraViewModel: ObservableObject {
     @Published var isCountingDown: Bool = false
     func BLEcaptureButtonPressed() {
         dispatchPrecondition(condition: .onQueue(.main))
+        BLE_manager.cameraButtonAction()
         switch BLE_manager.charValue?.mode {
         case "fixed_angle":
             logger.log("BLEcaptureButtonPressed fixed_angle")
@@ -283,6 +297,7 @@ class CameraViewModel: ObservableObject {
             }
         }
         
+        self.commitBLESettings()
         self.setCountDownTimer()
     }
 
@@ -391,8 +406,9 @@ class CameraViewModel: ObservableObject {
     private var countDownTimer: TriggerEveryTimer? = nil
 
     // MARK: - Private Functions
-
-    private func capturePhotoAndMetadata() {
+    
+    //TODO(BLE): cancel private
+    func capturePhotoAndMetadata() {
         logger.log("Capture photo called...")
         dispatchPrecondition(condition: .onQueue(.main))
 

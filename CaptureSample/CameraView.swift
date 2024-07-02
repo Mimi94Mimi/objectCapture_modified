@@ -276,7 +276,29 @@ struct FixedTimeIntervalCaptureButtonView: View {
     
     var body: some View {
         ZStack {
-            if (!model.isCountingDown){
+            if (BLE_manager.charValue?.cameraState == "shooting"){
+                if(model.isCountingDown){
+                    Circle()
+                        .foregroundColor(Color.red)
+                        .frame(width: CaptureButton.innerDiameter,
+                               height: CaptureButton.innerDiameter,
+                               alignment: .center)
+                        .cornerRadius(5)
+                    Text("\(Int(model.countDownValue))")
+                        .font(.largeTitle)
+                        .foregroundColor(Color.white)
+                        .frame(width: CaptureModeButton.toggleDiameter,
+                               height: CaptureModeButton.toggleDiameter,
+                               alignment: .center)
+                } else {
+                    Rectangle()
+                        .foregroundColor(Color.red)
+                        .frame(width: CaptureButton.squareDiameter,
+                               height: CaptureButton.squareDiameter,
+                               alignment: .center)
+                        .cornerRadius(5)
+                }
+            } else {
                 Circle()
                     .foregroundColor(Color.primary)
                     .frame(width: CaptureButton.innerDiameter,
@@ -286,19 +308,6 @@ struct FixedTimeIntervalCaptureButtonView: View {
                 Text("T")
                     .font(.largeTitle)
                     .foregroundColor(Color.black)
-                    .frame(width: CaptureModeButton.toggleDiameter,
-                           height: CaptureModeButton.toggleDiameter,
-                           alignment: .center)
-            } else {
-                Circle()
-                    .foregroundColor(Color.red)
-                    .frame(width: CaptureButton.innerDiameter,
-                           height: CaptureButton.innerDiameter,
-                           alignment: .center)
-                    .cornerRadius(5)
-                Text("\(Int(model.countDownValue))")
-                    .font(.largeTitle)
-                    .foregroundColor(Color.white)
                     .frame(width: CaptureModeButton.toggleDiameter,
                            height: CaptureModeButton.toggleDiameter,
                            alignment: .center)
@@ -463,10 +472,15 @@ struct ThumbnailImageView: View {
 }
 
 //TODO(PREVIEW)
-struct CameraView_Previews: PreviewProvider {
-    @StateObject private static var model = CameraViewModel()
-    @StateObject private static var BLE_manager = BLE()
-    static var previews: some View {
-        ContentView(model: model, BLE_manager: BLE_manager)
-    }
-}
+//struct CameraView_Previews: PreviewProvider {
+//    @StateObject var model: CameraViewModel
+//    @StateObject static var BLE_manager: BLE
+//    init(){
+//        let BLE_manager = BLE()
+//        _BLE_manager = StateObject(wrappedValue: BLE_manager)
+//        _model = StateObject(wrappedValue: CameraViewModel(BLE_manager: BLE_manager))
+//    }
+//    static var previews: some View {
+//        CameraView(model: CameraViewModel(BLE_manager: BLE_manager), BLE_manager: BLE_manager)
+//    }
+//}

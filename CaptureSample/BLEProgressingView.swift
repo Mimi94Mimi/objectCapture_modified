@@ -44,8 +44,7 @@ struct BLEProgressingView: View {
                 .overlay(
                     Circle()
                         .trim(from: 0,
-                              to: CGFloat(1.0 -
-                                            (model.timeUntilCaptureSecs / model.autoCaptureIntervalSecs)))
+                              to: CGFloat(1.0))
                         .stroke(style: StrokeStyle(lineWidth: timerBarWidth,
                                                    lineCap: .round,
                                                    lineJoin: .round))

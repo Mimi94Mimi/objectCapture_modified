@@ -65,7 +65,6 @@ class BLE: NSObject, ObservableObject {
     override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
-        
         charValue = CharValue()
         lastCharValue = LastCharValue()
         RPIcharacteristics = Characteristics()
@@ -154,13 +153,13 @@ class BLE: NSObject, ObservableObject {
     }
 
     private func handleShouldTakePhoto(value: String) -> Void{
+        //logger.log("call handle should take photo")
         if(value != lastCharValue?.shouldTakePhoto){
             lastCharValue?.shouldTakePhoto = value
             if (lastCharValue?.shouldTakePhoto == "false") {
                 charValue?.shouldTakePhoto = "false"
             }
             else if (lastCharValue?.shouldTakePhoto == "true") {
-                takePhoto()
                 writeOutgoingValue(data: "false" , txChar: RPIcharacteristics?.shouldTakePhotoChar)
                 charValue?.shouldTakePhoto = "true"
             }
