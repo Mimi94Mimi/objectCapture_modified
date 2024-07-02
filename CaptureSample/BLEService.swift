@@ -78,7 +78,7 @@ class BLE: NSObject, ObservableObject {
 
     
 
-    private var nanosec_shooting_TI: UInt64? = 0
+    var nanosec_shooting_TI: UInt64? = 0
     private var connectedCounterValue: Int = 0
     private var scanTimer: Timer?
     private var RSSIbound: Float = -70
@@ -241,13 +241,12 @@ class BLE: NSObject, ObservableObject {
     }
     
     func cameraButtonAction() {
-        print("cb action")
         if (charValue?.cameraState == "idle") {
             writeOutgoingValue(data: "shooting", txChar: RPIcharacteristics?.cameraStateChar)
             charValue?.cameraState = "shooting"
         }
         else if (charValue?.cameraState == "shooting") {
-            //BLE_manager.writeOutgoingValue(data: "idle", txChar: BLE_manager.RPIcharacteristics?.cameraStateChar)
+            writeOutgoingValue(data: "idle", txChar: RPIcharacteristics?.cameraStateChar)
             charValue?.cameraState = "idle"
         }
     }

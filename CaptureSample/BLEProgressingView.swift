@@ -21,15 +21,24 @@ struct BLEProgressingView: View {
 
     private var timerDiameter: CGFloat = 50
     private var timerBarWidth: CGFloat = 5
+    private var trimValue: CGFloat = 1
 
     init(model: CameraViewModel, diameter: CGFloat = 50, BLE_manager: BLE, barWidth: CGFloat = 5) {
         self.model = model
         self.BLE_manager = BLE_manager
         self.timerDiameter = diameter
         self.timerBarWidth = barWidth
+        if let BLEtriggerEveryTimer = model.BLEtriggerEveryTimer {
+            if BLEtriggerEveryTimer.isRunning{
+                trimValue = CGFloat(1.0) - (model.timeUntilCaptureSecs / BLE_manager.charValue!.timeInterval)
+            } else {
+                trimValue = CGFloat(1.0)
+            }
+        }
     }
 
-    var body: some View {
+    var body: some View{
+        
         ZStack {
 
             Circle()
@@ -44,7 +53,7 @@ struct BLEProgressingView: View {
                 .overlay(
                     Circle()
                         .trim(from: 0,
-                              to: CGFloat(1.0))
+                              to: trimValue)
                         .stroke(style: StrokeStyle(lineWidth: timerBarWidth,
                                                    lineCap: .round,
                                                    lineJoin: .round))

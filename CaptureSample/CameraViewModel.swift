@@ -109,8 +109,10 @@ class CameraViewModel: ObservableObject {
         return captureFolderState?.captureDir
     }
     
+    //TODO(BLE)
     var lastShouldTakePhoto: Bool = false
     var calls: Int = 0
+    var photoLeft: Int = 0
 
     static let maxPhotosAllowed = 250
     static let recommendedMinPhotos = 30
@@ -142,37 +144,44 @@ class CameraViewModel: ObservableObject {
     //TODO(BLE)
     func commitBLESettings(){
         dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+        photoLeft = BLE_manager.charValue!.numOfPhoto
         switch BLE_manager.charValue!.mode {
         case "fixed_time_interval":
-//            triggerEveryTimer = TriggerEveryTimer(
-//                triggerEvery: BLE_manager.charValue!.timeInterval,
-//                onTrigger: {
-//                    self.capturePhotoAndMetadata()
-//                },
-//                updateEvery: 1.0 / 30.0,  // 30 fps.
-//                onUpdate: { timeLeft in
-//                    self.timeUntilCaptureSecs = timeLeft
-//                })
+            setBLEtriggerEveryTimer()
             logger.log("fixed_time_interval commitBLESettings")
         case "fixed_angle":
-            captureMode = .manual
+            BLEtriggerEveryTimer = nil
+            logger.log("fixed_angle commitBLESettings")
         default:
             logger.log("cannot handle commitBLESettings. ")
         }
     }
     
     func setCountDownTimer(){
+        logger.log("countDownTimer")
         self.countDownValue = 3
         self.countDownTimer = TriggerEveryTimer(
             triggerEvery: 1.0,
             onTrigger: {
                 if(self.countDownValue - 1 > 0){
+                    logger.log("decrease countDownValue")
                     self.countDownValue = self.countDownValue - 1
                 } else {
                     self.countDownTimer?.stop()
                     self.setCountDownTimer()
                     self.isCountingDown = false
                 }
+            },
+            updateEvery: 1.0 / 30.0,  // 30 fps.
+            onUpdate: { timeLeft in
+            })
+    }
+    
+    func setBLEtriggerEveryTimer(){
+        BLEtriggerEveryTimer = TriggerEveryTimer(
+            triggerEvery: BLE_manager.charValue!.timeInterval,
+            onTrigger: {
+                
             },
             updateEvery: 1.0 / 30.0,  // 30 fps.
             onUpdate: { timeLeft in
@@ -197,22 +206,50 @@ class CameraViewModel: ObservableObject {
         }
     }
     
+    //TODO(BLE)
     @Published var isCountingDown: Bool = false
     func BLEcaptureButtonPressed() {
         dispatchPrecondition(condition: .onQueue(.main))
+        if(countDownTimer != nil){
+            logger.log("isCountingDown: \(self.isCountingDown)")
+            if(isCountingDown){
+                countDownTimer?.stop()
+                setCountDownTimer()
+                isCountingDown.toggle()
+            } else if (!isCountingDown && BLE_manager.charValue?.cameraState == "idle")  {
+                countDownTimer?.start()
+                isCountingDown.toggle()
+            }
+        }
+        
+        photoLeft = BLE_manager.charValue!.numOfPhoto
         BLE_manager.cameraButtonAction()
+        
         switch BLE_manager.charValue?.mode {
         case "fixed_angle":
             logger.log("BLEcaptureButtonPressed fixed_angle")
         case "fixed_time_interval":
-            precondition(countDownTimer != nil)
-            countDownTimer?.start()
-            isCountingDown = true
+            logger.log("BLEcaptureButtonPressed fixed_time_interval")
+            if BLEtriggerEveryTimer != nil && BLEtriggerEveryTimer!.isRunning {
+                BLEtriggerEveryTimer?.stop()
+                setBLEtriggerEveryTimer()
+            }
         default:
             logger.log("cannot handle BLEcaptureButtonPressed")
         }
     }
-
+    
+    func logCaptureTimeInterval(){
+        if(BLE_manager.nanosec_shooting_TI != 0){
+            let time_after = Double(DispatchTime.now().uptimeNanoseconds - BLE_manager.nanosec_shooting_TI!) / Double(1000000000)
+            BLE_manager.nanosec_shooting_TI = DispatchTime.now().uptimeNanoseconds
+            logger.log("\(time_after)s after last shot")
+        }
+        else{
+            BLE_manager.nanosec_shooting_TI = DispatchTime.now().uptimeNanoseconds
+        }
+    }
+    
     /// This method creates a new capture dictionary and resets the app's capture folder state. It doesn't
     /// change any`AVCaptureSession` settings.
     func requestNewCaptureFolder() {
@@ -339,6 +376,7 @@ class CameraViewModel: ObservableObject {
     private var duration: CMTime? = AVCaptureDevice.currentExposureDuration
     private var iso: Float? = AVCaptureDevice.currentISO
     private var whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains? = AVCaptureDevice.currentWhiteBalanceGains
+    
 
     // modified
     private var photoQualityPrioritizationMode: AVCapturePhotoOutput.QualityPrioritization =
@@ -400,10 +438,13 @@ class CameraViewModel: ObservableObject {
 
     /// This helper class is used during automatic mode to trigger image captures.  When the app is in
     /// manual mode, it's `nil`.
-    private var triggerEveryTimer: TriggerEveryTimer? = nil
+    var triggerEveryTimer: TriggerEveryTimer? = nil
+    
+    //TODO(BLE): cancel private
+    var BLEtriggerEveryTimer: TriggerEveryTimer? = nil
     
     //TODO(BLE)
-    private var countDownTimer: TriggerEveryTimer? = nil
+    var countDownTimer: TriggerEveryTimer? = nil
 
     // MARK: - Private Functions
     

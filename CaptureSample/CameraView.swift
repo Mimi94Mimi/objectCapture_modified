@@ -16,13 +16,7 @@ struct CameraView: View {
     @State private var showInfo: Bool = false
     //TODO(BLE)
     @ObservedObject var BLE_manager: BLE
-    @State private var showBLESettings: Bool = false {
-        didSet{
-            if(!showBLESettings){
-                model.commitBLESettings()
-            }
-        }
-    }
+    @State private var showBLESettings: Bool = false
     
     let aspectRatio: CGFloat = 4.0 / 3.0
     let previewCornerRadius: CGFloat = 15.0
@@ -88,6 +82,12 @@ struct CameraView: View {
             .navigationBarTitle("Scan")
             .navigationBarHidden(true)
             .navigationBarTitleDisplayMode(.inline)
+            //TODO(BLE)
+            .onChange(of: showBLESettings, perform: { value in
+                if !value {
+                    model.commitBLESettings()
+                }
+            })
         }
     }
 }
@@ -124,7 +124,14 @@ struct CaptureButtonPanelView: View {
 //                                      frameWidth: width / 3)
 //                        .padding(.horizontal)
                     Text("RSSI: \(Int(BLE_manager.current_RSSI))")
-                    Text("photos left: \(BLE_manager.charValue!.numOfPhoto)")
+                    switch (BLE_manager.charValue?.cameraState){
+                    case "idle":
+                        Text("photos left: \(BLE_manager.charValue!.numOfPhoto)")
+                    case "shooting":
+                        Text("photos left: \(model.photoLeft)")
+                    default:
+                        Text("photos left: N/A")
+                    }
                 }
                 .padding(.trailing, 20.0)
             }
@@ -210,7 +217,7 @@ struct CaptureButton: View {
         }, label: {
             if (BLE_manager.charValue?.mode == "fixed_time_interval"){
                 FixedTimeIntervalCaptureButtonView(model: model, BLE_manager: BLE_manager)
-            } else {
+            } else if (BLE_manager.charValue?.mode == "fixed_angle") {
                 FixedAngleCaptureButtonView(model: model, BLE_manager: BLE_manager)
             }
         }).disabled(!model.isCameraAvailable || !model.readyToCapture)
@@ -324,18 +331,42 @@ struct FixedAngleCaptureButtonView: View {
     
     var body: some View {
         ZStack {
-            Circle()
-                .foregroundColor(Color.primary)
-                .frame(width: CaptureButton.innerDiameter,
-                       height: CaptureButton.innerDiameter,
-                       alignment: .center)
-                .cornerRadius(5)
-            Text("A")
-                .font(.largeTitle)
-                .foregroundColor(Color.black)
-                .frame(width: CaptureModeButton.toggleDiameter,
-                       height: CaptureModeButton.toggleDiameter,
-                       alignment: .center)
+            if (BLE_manager.charValue?.cameraState == "shooting"){
+                if(model.isCountingDown){
+                    Circle()
+                        .foregroundColor(Color.red)
+                        .frame(width: CaptureButton.innerDiameter,
+                               height: CaptureButton.innerDiameter,
+                               alignment: .center)
+                        .cornerRadius(5)
+                    Text("\(Int(model.countDownValue))")
+                        .font(.largeTitle)
+                        .foregroundColor(Color.white)
+                        .frame(width: CaptureModeButton.toggleDiameter,
+                               height: CaptureModeButton.toggleDiameter,
+                               alignment: .center)
+                } else {
+                    Rectangle()
+                        .foregroundColor(Color.red)
+                        .frame(width: CaptureButton.squareDiameter,
+                               height: CaptureButton.squareDiameter,
+                               alignment: .center)
+                        .cornerRadius(5)
+                }
+            } else {
+                Circle()
+                    .foregroundColor(Color.primary)
+                    .frame(width: CaptureButton.innerDiameter,
+                           height: CaptureButton.innerDiameter,
+                           alignment: .center)
+                    .cornerRadius(5)
+                Text("A")
+                    .font(.largeTitle)
+                    .foregroundColor(Color.black)
+                    .frame(width: CaptureModeButton.toggleDiameter,
+                           height: CaptureModeButton.toggleDiameter,
+                           alignment: .center)
+            }
             BLEProgressingView(model: model, diameter: CaptureButton.outerDiameter, BLE_manager: BLE_manager)
         }
     }
