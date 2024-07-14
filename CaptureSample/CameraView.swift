@@ -32,24 +32,30 @@ struct CameraView: View {
                     // around the live preview and round the corners.
                     VStack {
                         Spacer()
-                        CameraPreviewView(session: model.session)
-                            .frame(width: geometryReader.size.width,
-                                   height: geometryReader.size.width * aspectRatio,
-                                   alignment: .center)
-                            .clipShape(RoundedRectangle(cornerRadius: previewCornerRadius))
-                            .onAppear { model.startSession() }
-                            .onDisappear { model.pauseSession() }
-                            .overlay(
-                                Image("ObjectReticle")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .padding(.all))
-                        
+                        //TODO(CAMERA BLINK)
+                        ZStack {
+                            CameraPreviewView(session: model.session)
+                                .frame(width: geometryReader.size.width,
+                                       height: geometryReader.size.width * aspectRatio,
+                                       alignment: .center)
+                                .clipShape(RoundedRectangle(cornerRadius: previewCornerRadius))
+                                .onAppear { model.startSession() }
+                                .onDisappear { model.pauseSession() }
+                                .overlay(
+                                    Image("ObjectReticle")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .padding(.all))
+                            if (BLE_manager.charValue != nil && BLE_manager.charValue!.shouldTakePhoto == "true") {
+                                ShutterBlinkView()
+                            }
+                        }
                         Spacer()
                     }
                     
                     VStack {
                         // The app shows this view when showInfo is true.
+                        //TODO(BLE)
                         ScanToolbarView(model: model, showInfo: $showInfo, showBLESettings: $showBLESettings).padding(.horizontal)
                         if showInfo {
                             InfoPanelView(model: model)
@@ -58,7 +64,9 @@ struct CameraView: View {
                         Spacer()
                         //TODO(BLE)
                         CaptureButtonPanelView(model: model, width: geometryReader.size.width, BLE_manager: BLE_manager)
-                    }.popover(isPresented: $showBLESettings) {
+                    }
+                    //TODO(BLE)
+                    .popover(isPresented: $showBLESettings) {
                         ZStack {
                             BLEOptionsView(model: model, BLE_manager: BLE_manager)
                         }
@@ -74,9 +82,7 @@ struct CameraView: View {
                         .frame(width: geometryReader.size.width, height: geometryReader.size.height)
                         .background(Color(red: 0.5, green: 0.5, blue: 0.5, opacity: 0.3))
                     }
-                    
                 }
-                
             }
             .navigationTitle(Text("Scan"))
             .navigationBarTitle("Scan")
@@ -112,7 +118,6 @@ struct CaptureButtonPanelView: View {
             }
             HStack {
                 Spacer()
-                //TODO(BLE)
                 CaptureButton(model: model, BLE_manager: BLE_manager)
                 Spacer()
             }
@@ -123,7 +128,12 @@ struct CaptureButtonPanelView: View {
 //                    CaptureModeButton(model: model,
 //                                      frameWidth: width / 3)
 //                        .padding(.horizontal)
-                    Text("RSSI: \(Int(BLE_manager.current_RSSI))")
+                    if BLE_manager.current_RSSI != nil{
+                        Text("RSSI: \(Int(BLE_manager.current_RSSI ?? 0))")
+                    } else {
+                        Text("RSSI: N/A")
+                    }
+                    
                     switch (BLE_manager.charValue?.cameraState){
                     case "idle":
                         Text("photos left: \(BLE_manager.charValue!.numOfPhoto)")
@@ -221,22 +231,6 @@ struct CaptureButton: View {
                 FixedAngleCaptureButtonView(model: model, BLE_manager: BLE_manager)
             }
         }).disabled(!model.isCameraAvailable || !model.readyToCapture)
-        
-//        Button(action: {
-//            model.captureButtonPressed()
-//        }, label: {
-//            AutoCaptureButtonView(model: model)
-//        }).disabled(!model.isCameraAvailable || !model.readyToCapture)
-        
-//        Button(action: {
-//            
-//        }, label: {
-//            if model.isAutoCaptureActive {
-//                AutoCaptureButtonView(model: model)
-//            } else {
-//                ManualCaptureButtonView()
-//            }
-//        }).disabled(!model.isCameraAvailable || !model.readyToCapture)
     }
 }
 
@@ -283,41 +277,30 @@ struct FixedTimeIntervalCaptureButtonView: View {
     
     var body: some View {
         ZStack {
-            if (BLE_manager.charValue?.cameraState == "shooting"){
-                if(model.isCountingDown){
-                    Circle()
-                        .foregroundColor(Color.red)
-                        .frame(width: CaptureButton.innerDiameter,
-                               height: CaptureButton.innerDiameter,
-                               alignment: .center)
-                        .cornerRadius(5)
-                    Text("\(Int(model.countDownValue))")
-                        .font(.largeTitle)
-                        .foregroundColor(Color.white)
-                        .frame(width: CaptureModeButton.toggleDiameter,
-                               height: CaptureModeButton.toggleDiameter,
-                               alignment: .center)
-                } else {
+            if(model.isCountingDown){
+                CountDownButtonView(model: model, BLE_manager: BLE_manager)
+            } else {
+                if (BLE_manager.charValue?.cameraState == "shooting"){
                     Rectangle()
                         .foregroundColor(Color.red)
                         .frame(width: CaptureButton.squareDiameter,
                                height: CaptureButton.squareDiameter,
                                alignment: .center)
                         .cornerRadius(5)
+                } else if (BLE_manager.charValue?.cameraState == "idle") {
+                    Circle()
+                        .foregroundColor(Color.primary)
+                        .frame(width: CaptureButton.innerDiameter,
+                               height: CaptureButton.innerDiameter,
+                               alignment: .center)
+                        .cornerRadius(5)
+                    Text("T")
+                        .font(.largeTitle)
+                        .foregroundColor(Color.black)
+                        .frame(width: CaptureModeButton.toggleDiameter,
+                               height: CaptureModeButton.toggleDiameter,
+                               alignment: .center)
                 }
-            } else {
-                Circle()
-                    .foregroundColor(Color.primary)
-                    .frame(width: CaptureButton.innerDiameter,
-                           height: CaptureButton.innerDiameter,
-                           alignment: .center)
-                    .cornerRadius(5)
-                Text("T")
-                    .font(.largeTitle)
-                    .foregroundColor(Color.black)
-                    .frame(width: CaptureModeButton.toggleDiameter,
-                           height: CaptureModeButton.toggleDiameter,
-                           alignment: .center)
             }
             BLEProgressingView(model: model, diameter: CaptureButton.outerDiameter, BLE_manager: BLE_manager)
         }
@@ -331,47 +314,64 @@ struct FixedAngleCaptureButtonView: View {
     
     var body: some View {
         ZStack {
-            if (BLE_manager.charValue?.cameraState == "shooting"){
-                if(model.isCountingDown){
-                    Circle()
-                        .foregroundColor(Color.red)
-                        .frame(width: CaptureButton.innerDiameter,
-                               height: CaptureButton.innerDiameter,
-                               alignment: .center)
-                        .cornerRadius(5)
-                    Text("\(Int(model.countDownValue))")
-                        .font(.largeTitle)
-                        .foregroundColor(Color.white)
-                        .frame(width: CaptureModeButton.toggleDiameter,
-                               height: CaptureModeButton.toggleDiameter,
-                               alignment: .center)
-                } else {
+            if(model.isCountingDown){
+                CountDownButtonView(model: model, BLE_manager: BLE_manager)
+            } else {
+                if (BLE_manager.charValue?.cameraState == "shooting"){
                     Rectangle()
                         .foregroundColor(Color.red)
                         .frame(width: CaptureButton.squareDiameter,
                                height: CaptureButton.squareDiameter,
                                alignment: .center)
                         .cornerRadius(5)
+                } else if (BLE_manager.charValue?.cameraState == "idle") {
+                    Circle()
+                        .foregroundColor(Color.primary)
+                        .frame(width: CaptureButton.innerDiameter,
+                               height: CaptureButton.innerDiameter,
+                               alignment: .center)
+                        .cornerRadius(5)
+                    Text("A")
+                        .font(.largeTitle)
+                        .foregroundColor(Color.black)
+                        .frame(width: CaptureModeButton.toggleDiameter,
+                               height: CaptureModeButton.toggleDiameter,
+                               alignment: .center)
                 }
-            } else {
-                Circle()
-                    .foregroundColor(Color.primary)
-                    .frame(width: CaptureButton.innerDiameter,
-                           height: CaptureButton.innerDiameter,
-                           alignment: .center)
-                    .cornerRadius(5)
-                Text("A")
-                    .font(.largeTitle)
-                    .foregroundColor(Color.black)
-                    .frame(width: CaptureModeButton.toggleDiameter,
-                           height: CaptureModeButton.toggleDiameter,
-                           alignment: .center)
             }
             BLEProgressingView(model: model, diameter: CaptureButton.outerDiameter, BLE_manager: BLE_manager)
         }
     }
 }
 
+///button view when it's in counting down section
+struct CountDownButtonView: View {
+    @ObservedObject var model: CameraViewModel
+    @ObservedObject var BLE_manager: BLE
+    
+    var body: some View {
+        Circle()
+            .foregroundColor(Color.red)
+            .frame(width: CaptureButton.innerDiameter,
+                   height: CaptureButton.innerDiameter,
+                   alignment: .center)
+            .cornerRadius(5)
+        Text("\(Int(model.countDownValue))")
+            .font(.largeTitle)
+            .foregroundColor(Color.white)
+            .frame(width: CaptureModeButton.toggleDiameter,
+                   height: CaptureModeButton.toggleDiameter,
+                   alignment: .center)
+    }
+}
+
+struct ShutterBlinkView: View {
+    var body: some View {
+        Color.black
+    }
+}
+
+//discard
 struct CaptureModeButton: View {
     static let toggleDiameter = CaptureButton.outerDiameter / 3.0
     static let backingDiameter = CaptureModeButton.toggleDiameter * 2.0
@@ -501,17 +501,3 @@ struct ThumbnailImageView: View {
             .shadow(radius: 10)
     }
 }
-
-//TODO(PREVIEW)
-//struct CameraView_Previews: PreviewProvider {
-//    @StateObject var model: CameraViewModel
-//    @StateObject static var BLE_manager: BLE
-//    init(){
-//        let BLE_manager = BLE()
-//        _BLE_manager = StateObject(wrappedValue: BLE_manager)
-//        _model = StateObject(wrappedValue: CameraViewModel(BLE_manager: BLE_manager))
-//    }
-//    static var previews: some View {
-//        CameraView(model: CameraViewModel(BLE_manager: BLE_manager), BLE_manager: BLE_manager)
-//    }
-//}

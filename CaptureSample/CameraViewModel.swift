@@ -95,7 +95,12 @@ class CameraViewModel: ObservableObject {
     /// next capture trigger.
     @Published var timeUntilCaptureSecs: Double = 0
     
+    //TODO(BLE)
+    /// the count down timer value (from 3 to 1) before entering shooting process
     @Published var countDownValue: Double = 0
+    
+    /// If it's in the count down section, returns true
+    @Published var isCountingDown: Bool = false
 
     var autoCaptureIntervalSecs: Double = 0
 
@@ -110,9 +115,9 @@ class CameraViewModel: ObservableObject {
     }
     
     //TODO(BLE)
-    var lastShouldTakePhoto: Bool = false
-    var calls: Int = 0
     var photoLeft: Int = 0
+    var BLEtriggerEveryTimer: TriggerEveryTimer? = nil
+    var countDownTimer: TriggerEveryTimer? = nil
 
     static let maxPhotosAllowed = 250
     static let recommendedMinPhotos = 30
@@ -127,6 +132,7 @@ class CameraViewModel: ObservableObject {
         // permissions.
         self.BLE_manager = _BLE_manager
         startSetup()
+        self.setCountDownTimer()
     }
 
     /// This method advances through the available capture modes, updating `captureMode`.
@@ -139,54 +145,6 @@ class CameraViewModel: ObservableObject {
         case .automatic(_):
             captureMode = .manual
         }
-    }
-    
-    //TODO(BLE)
-    func commitBLESettings(){
-        dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-        photoLeft = BLE_manager.charValue!.numOfPhoto
-        switch BLE_manager.charValue!.mode {
-        case "fixed_time_interval":
-            setBLEtriggerEveryTimer()
-            logger.log("fixed_time_interval commitBLESettings")
-        case "fixed_angle":
-            BLEtriggerEveryTimer = nil
-            logger.log("fixed_angle commitBLESettings")
-        default:
-            logger.log("cannot handle commitBLESettings. ")
-        }
-    }
-    
-    func setCountDownTimer(){
-        logger.log("countDownTimer")
-        self.countDownValue = 3
-        self.countDownTimer = TriggerEveryTimer(
-            triggerEvery: 1.0,
-            onTrigger: {
-                if(self.countDownValue - 1 > 0){
-                    logger.log("decrease countDownValue")
-                    self.countDownValue = self.countDownValue - 1
-                } else {
-                    self.countDownTimer?.stop()
-                    self.setCountDownTimer()
-                    self.isCountingDown = false
-                }
-            },
-            updateEvery: 1.0 / 30.0,  // 30 fps.
-            onUpdate: { timeLeft in
-            })
-    }
-    
-    func setBLEtriggerEveryTimer(){
-        BLEtriggerEveryTimer = TriggerEveryTimer(
-            triggerEvery: BLE_manager.charValue!.timeInterval,
-            onTrigger: {
-                
-            },
-            updateEvery: 1.0 / 30.0,  // 30 fps.
-            onUpdate: { timeLeft in
-                self.timeUntilCaptureSecs = timeLeft
-            })
     }
 
     /// When the user presses the capture button, this method is called.
@@ -203,50 +161,6 @@ class CameraViewModel: ObservableObject {
             } else {
                 startAutomaticCapture()
             }
-        }
-    }
-    
-    //TODO(BLE)
-    @Published var isCountingDown: Bool = false
-    func BLEcaptureButtonPressed() {
-        dispatchPrecondition(condition: .onQueue(.main))
-        if(countDownTimer != nil){
-            logger.log("isCountingDown: \(self.isCountingDown)")
-            if(isCountingDown){
-                countDownTimer?.stop()
-                setCountDownTimer()
-                isCountingDown.toggle()
-            } else if (!isCountingDown && BLE_manager.charValue?.cameraState == "idle")  {
-                countDownTimer?.start()
-                isCountingDown.toggle()
-            }
-        }
-        
-        photoLeft = BLE_manager.charValue!.numOfPhoto
-        BLE_manager.cameraButtonAction()
-        
-        switch BLE_manager.charValue?.mode {
-        case "fixed_angle":
-            logger.log("BLEcaptureButtonPressed fixed_angle")
-        case "fixed_time_interval":
-            logger.log("BLEcaptureButtonPressed fixed_time_interval")
-            if BLEtriggerEveryTimer != nil && BLEtriggerEveryTimer!.isRunning {
-                BLEtriggerEveryTimer?.stop()
-                setBLEtriggerEveryTimer()
-            }
-        default:
-            logger.log("cannot handle BLEcaptureButtonPressed")
-        }
-    }
-    
-    func logCaptureTimeInterval(){
-        if(BLE_manager.nanosec_shooting_TI != 0){
-            let time_after = Double(DispatchTime.now().uptimeNanoseconds - BLE_manager.nanosec_shooting_TI!) / Double(1000000000)
-            BLE_manager.nanosec_shooting_TI = DispatchTime.now().uptimeNanoseconds
-            logger.log("\(time_after)s after last shot")
-        }
-        else{
-            BLE_manager.nanosec_shooting_TI = DispatchTime.now().uptimeNanoseconds
         }
     }
     
@@ -333,9 +247,6 @@ class CameraViewModel: ObservableObject {
                 self.isMotionDataEnabled = false
             }
         }
-        
-        self.commitBLESettings()
-        self.setCountDownTimer()
     }
 
     func startSession() {
@@ -359,6 +270,113 @@ class CameraViewModel: ObservableObject {
             stopAutomaticCapture()
         }
     }
+    
+    //TODO(BLE)
+    func commitBLESettings(){
+        dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+        photoLeft = BLE_manager.charValue?.numOfPhoto ?? BLE.initCharValue.numOfPhoto
+        guard BLE_manager.charValue?.mode != nil else {
+            setBLEtriggerEveryTimer()
+            logger.log("initial commitBLESettings (fixed_angle)")
+            return
+        }
+        switch BLE_manager.charValue!.mode {
+        case "fixed_time_interval":
+            setBLEtriggerEveryTimer()
+            logger.log("fixed_time_interval commitBLESettings")
+        case "fixed_angle":
+            BLEtriggerEveryTimer = nil
+            logger.log("fixed_angle commitBLESettings")
+        default:
+            logger.log("cannot handle commitBLESettings. ")
+        }
+    }
+    
+    ///reset the count down timer
+    func setCountDownTimer(){
+        self.countDownValue = 3
+        self.countDownTimer = TriggerEveryTimer(
+            triggerEvery: 1.0,
+            onTrigger: {
+                if(self.countDownValue - 1 > 0){
+                    logger.log("decrease countDownValue")
+                    self.countDownValue = self.countDownValue - 1
+                } else {
+                    self.countDownTimer?.stop()
+                    self.setCountDownTimer()
+                    self.isCountingDown = false
+                }
+            },
+            updateEvery: 1.0 / 30.0,  // 30 fps.
+            onUpdate: { timeLeft in
+            })
+    }
+    
+    /// create a `TriggerEveryTimer` instance assigned to `BLEtriggerEveryTimer`
+    func setBLEtriggerEveryTimer(){
+        BLEtriggerEveryTimer = TriggerEveryTimer(
+            triggerEvery: BLE_manager.charValue!.timeInterval,
+            onTrigger: {
+                // do nothing
+            },
+            updateEvery: 1.0 / 30.0,  // 30 fps.
+            onUpdate: { timeLeft in
+                self.timeUntilCaptureSecs = timeLeft
+            })
+    }
+    
+    func BLEcaptureButtonPressed() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard countDownTimer != nil else {
+            logger.log("countDownTimer is nil when calling BLEcaptureButtonPressed.")
+            return
+        }
+        if(BLE_manager.charValue?.cameraState == "idle"){
+            // starts the shooting process
+            countDownTimer?.start()
+            isCountingDown = true
+            photoLeft = BLE_manager.charValue!.numOfPhoto
+        } else if(BLE_manager.charValue?.cameraState == "shooting") {
+            // when it's in counting down section and someone cancels the shooting process
+            if(isCountingDown){
+                countDownTimer?.stop()
+                setCountDownTimer()
+                isCountingDown = false
+            }
+            // when already entering shooting process (after counting down)
+            else{
+                if(BLE_manager.charValue?.mode == "fixed_time_interval"){
+                    guard BLEtriggerEveryTimer != nil else {
+                        logger.log("BLEtriggerEveryTimer is nil while in fixed time interval mode")
+                        return
+                    }
+                    guard BLEtriggerEveryTimer!.isRunning else {
+                        logger.log("BLEtriggerEveryTimer is not running while shooting in fixed time interval mode")
+                        return
+                    }
+                    BLEtriggerEveryTimer?.stop()
+                    setBLEtriggerEveryTimer()
+                }
+            }
+        }
+        BLE_manager.cameraButtonAction()
+    }
+    
+    ///since `capturePhotoAndMetadata` is private
+    func captureFromShutterManager(){
+        BLE_manager.logCaptureTimeInterval()
+        capturePhotoAndMetadata()
+        photoLeft -= 1
+        if BLEtriggerEveryTimer != nil {
+            if photoLeft <= 0 {
+                BLEtriggerEveryTimer?.stop()
+                return
+            } else if !BLEtriggerEveryTimer!.isRunning {
+                BLEtriggerEveryTimer?.start()
+                logger.log("start BLEtriggerEveryTimer")
+            }
+        }
+    }
 
     // MARK: - Private State
 
@@ -371,14 +389,14 @@ class CameraViewModel: ObservableObject {
     // unique within a session.
     private var photoId: UInt32 = 0
     
-    //new
+    //TODO(EXPOSURE)
     ///exposure, white balance parameters
     private var duration: CMTime? = AVCaptureDevice.currentExposureDuration
     private var iso: Float? = AVCaptureDevice.currentISO
     private var whiteBalanceGains: AVCaptureDevice.WhiteBalanceGains? = AVCaptureDevice.currentWhiteBalanceGains
     
 
-    // modified
+    //TODO(EXPOSURE)
     private var photoQualityPrioritizationMode: AVCapturePhotoOutput.QualityPrioritization =
         .speed
 
@@ -438,18 +456,11 @@ class CameraViewModel: ObservableObject {
 
     /// This helper class is used during automatic mode to trigger image captures.  When the app is in
     /// manual mode, it's `nil`.
-    var triggerEveryTimer: TriggerEveryTimer? = nil
-    
-    //TODO(BLE): cancel private
-    var BLEtriggerEveryTimer: TriggerEveryTimer? = nil
-    
-    //TODO(BLE)
-    var countDownTimer: TriggerEveryTimer? = nil
+    private var triggerEveryTimer: TriggerEveryTimer? = nil
 
     // MARK: - Private Functions
     
-    //TODO(BLE): cancel private
-    func capturePhotoAndMetadata() {
+    private func capturePhotoAndMetadata() {
         logger.log("Capture photo called...")
         dispatchPrecondition(condition: .onQueue(.main))
 
@@ -603,12 +614,10 @@ class CameraViewModel: ObservableObject {
         }
     }
     
-    //new
+    //TODO(EXPOSURE)
     ///if the device support custom exposure mode, apply specified duration and iso, else set to locked exposure mode.
     private func setExposure(device: AVCaptureDevice) {
-        
         if device.isExposureModeSupported(.custom) {
-            
             do{
                 try device.lockForConfiguration()
                     
@@ -636,12 +645,10 @@ class CameraViewModel: ObservableObject {
         }
     }
     
-    //new
+    //TODO(EXPOSURE)
     ///if the device support locked white balance mode, apply specified white balance gains, else set to auto white balance mode.
     private func setWhiteBalance(device: AVCaptureDevice) {
         ///set white balance gains (locked mode)
-        let whiteBalanceGains = AVCaptureDevice.currentWhiteBalanceGains
-        
         if device.isWhiteBalanceModeSupported(.locked) {
             do{
                 try device.lockForConfiguration()
@@ -687,7 +694,7 @@ class CameraViewModel: ObservableObject {
             let videoDeviceInput = try AVCaptureDeviceInput(
                 device: getVideoDeviceForPhotogrammetry())
             
-            //new
+            //TODO(EXPOSURE)
             setExposure(device: videoDeviceInput.device)
             setWhiteBalance(device: videoDeviceInput.device)
 

@@ -10,7 +10,7 @@ import Combine
 import Foundation
 import SwiftUI
 
-/// This view displays a darkened circle that fills with a brighter arc based on the time remaining on a `Timer`.
+/// This view is the BLE version of TimerView in original CaptureSample
 struct BLEProgressingView: View {
     @ObservedObject var model: CameraViewModel
     @ObservedObject var BLE_manager: BLE
@@ -28,6 +28,7 @@ struct BLEProgressingView: View {
         self.BLE_manager = BLE_manager
         self.timerDiameter = diameter
         self.timerBarWidth = barWidth
+        /// revised from TimerView
         if let BLEtriggerEveryTimer = model.BLEtriggerEveryTimer {
             if BLEtriggerEveryTimer.isRunning{
                 trimValue = CGFloat(1.0) - (model.timeUntilCaptureSecs / BLE_manager.charValue!.timeInterval)

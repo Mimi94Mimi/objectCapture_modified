@@ -7,19 +7,6 @@ Custom app subclass.
 
 import SwiftUI
 
-//@main
-//struct CaptureSampleApp: App {
-//    @StateObject var model = CameraViewModel()
-//    @StateObject var BLEmodel = BLEViewModel()
-//
-//    var body: some Scene {
-//        WindowGroup {
-//            //ContentView(model: model)
-//            BLEOptionsView(model: BLEmodel)
-//        }
-//    }
-//}
-
 //TODO(BLE)
 @main
 struct CaptureSampleApp: App {

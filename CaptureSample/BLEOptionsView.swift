@@ -33,7 +33,6 @@ struct BLEOptionsView: View {
                 angleView(BLE_manager)
                 timeIntervalView(BLE_manager)
                 Spacer()
-                //shutterPanelView(BLE_manager)
             }
             .padding(.horizontal, 10.0)
         }
@@ -43,10 +42,8 @@ struct BLEOptionsView: View {
 class SelectedIndex: ObservableObject{
     @ObservedObject var model: CameraViewModel
     @ObservedObject var BLE_manager: BLE
-    @Published var index: Int = 1 {
+    @Published var index: Int {
         didSet{
-            print(index)
-            logger.log("mode onchange")
             if index == 1{
                 BLE_manager.modeCtrlAction("fixed_angle")
             }
@@ -114,6 +111,7 @@ struct numOfPhotoView: View {
         UITextField.appearance().backgroundColor = .lightGray
         self.BLE_manager = BLE_manager
         self.value = String(BLE_manager.charValue!.numOfPhoto)
+        /// if the current value typed in textfiled is not valid, show previous valid value
         self.prevValue = String(BLE_manager.charValue!.numOfPhoto)
     }
     
@@ -155,7 +153,6 @@ struct numOfPhotoView: View {
                 .frame(height: 40)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
-                    print(value)
                     logger.log("numofphoto onsubmit")
                     let message = BLE_manager.numOfPhotoTFAction(value)
                     switch(message){
@@ -164,14 +161,12 @@ struct numOfPhotoView: View {
                         break
                         
                         case "Value error":
-                        print(prevValue)
                         errorMsg = "Value error"
                         showAlert = true
                         value = prevValue
                         break
                         
                         case "Invalid value":
-                        print(prevValue)
                         errorMsg = "Invalid value"
                         showAlert = true
                         value = prevValue
@@ -200,6 +195,7 @@ struct angleView: View {
         UITextField.appearance().backgroundColor = .lightGray
         self.BLE_manager = BLE_manager
         self.value = String(BLE_manager.charValue!.angle)
+        /// if the current value typed in textfiled is not valid, show previous valid value
         self.prevValue = String(BLE_manager.charValue!.angle)
     }
     
@@ -241,7 +237,6 @@ struct angleView: View {
                 .frame(height: 40)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
-                    print(value)
                     logger.log("angle onsubmit")
                     let message = BLE_manager.angleTFAction(value)
                     switch(message){
@@ -250,14 +245,12 @@ struct angleView: View {
                         break
                         
                         case "Value error":
-                        print(prevValue)
                         errorMsg = "Value error"
                         showAlert = true
                         value = prevValue
                         break
                         
                         case "Invalid value":
-                        print(prevValue)
                         errorMsg = "Invalid value"
                         showAlert = true
                         value = prevValue
@@ -286,6 +279,7 @@ struct timeIntervalView: View {
         UITextField.appearance().backgroundColor = .lightGray
         self.BLE_manager = BLE_manager
         self.value = String(BLE_manager.charValue!.timeInterval)
+        /// if the current value typed in textfiled is not valid, show previous valid value
         self.prevValue = String(BLE_manager.charValue!.timeInterval)
     }
     func textfieldAlert(_ error: String) -> Alert? {
@@ -325,7 +319,6 @@ struct timeIntervalView: View {
                 .frame(height: 40)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
-                    print(value)
                     logger.log("time interval onsubmit")
                     let message = BLE_manager.timeIntervalTFAction(value)
                     switch(message){
@@ -334,14 +327,12 @@ struct timeIntervalView: View {
                         break
                         
                         case "Value error":
-                        print(prevValue)
                         errorMsg = "Value error"
                         showAlert = true
                         value = prevValue
                         break
                         
                         case "Invalid value":
-                        print(prevValue)
                         errorMsg = "Invalid value"
                         showAlert = true
                         value = prevValue
@@ -357,74 +348,3 @@ struct timeIntervalView: View {
                 content: { self.textfieldAlert(errorMsg)! })
     }
 }
-
-struct shutterPanelView: View {
-    @ObservedObject var BLE_manager: BLE
-    init(_ BLE_manager: BLE){
-        self.BLE_manager = BLE_manager
-    }
-    var body: some View{
-        HStack{
-            Spacer()
-                .frame(width: 20)
-            cameraButtonView(BLE_manager)
-            Spacer()
-            shutterView(BLE_manager)
-            
-        }
-    }
-}
-
-struct cameraButtonView: View {
-    @ObservedObject var BLE_manager: BLE
-    init(_ BLE_manager: BLE){
-        self.BLE_manager = BLE_manager
-    }
-    func onPress(){
-        BLE_manager.cameraButtonAction()
-        
-    }
-    func getButtonText() -> String {
-        if(self.BLE_manager.charValue?.cameraState == "idle") {return "START"}
-        else {return "STOP"}
-    }
-    var body: some View{
-        Button(action: onPress) {
-            Text(getButtonText())
-                .font(.system(size: 20))
-                .padding(10)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(.cyan)
-    }
-}
-
-struct shutterView: View {
-    @ObservedObject var BLE_manager: BLE
-    init(_ BLE_manager: BLE){
-        self.BLE_manager = BLE_manager
-    }
-    func get_color() -> Color {
-        if(self.BLE_manager.shutter) {return Color("red")}
-        else {return Color("green")}
-    }
-    var body: some View{
-        if(self.BLE_manager.shutter){
-            Rectangle()
-                .fill(.green)
-                .frame(width: 20, height: 20)
-        }
-        else{
-            Rectangle()
-                .fill(.red)
-                .frame(width: 20, height: 20)
-        }
-    }
-}
-
-//struct BLEOptionsView_Previews: PreviewProvider {
-//    @StateObject private static var model = BLEViewModel()
-//    static var previews: some View {
-//        BLEOptionsView(model: model)
-//    }
-//}
