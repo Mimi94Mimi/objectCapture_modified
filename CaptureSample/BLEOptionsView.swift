@@ -84,7 +84,7 @@ struct modeView: View {
                 Spacer()
             }
             HStack{
-                Text("fixed angle for evert shot or fixed time")
+                Text("fixed angle for every shot or fixed time")
                     .foregroundColor(Color.gray)
                     .multilineTextAlignment(.leading)
                 Spacer()

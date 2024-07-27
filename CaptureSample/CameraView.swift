@@ -21,6 +21,17 @@ struct CameraView: View {
     let aspectRatio: CGFloat = 4.0 / 3.0
     let previewCornerRadius: CGFloat = 15.0
     
+    //TODO(BLE)
+    func peripheralMissingAlert() -> Alert {
+        return Alert(
+            title: Text("Cannot Find Raspberry Pi"),
+            message: Text("Make sure Raspberry Pi has been powered on and advertising."),
+            dismissButton: .default(Text("Try Again"), action: {
+                BLE_manager.startScanning()
+            })
+        )
+    }
+    
     var body: some View {
         NavigationView {
             GeometryReader { geometryReader in
@@ -81,6 +92,9 @@ struct CameraView: View {
                         }
                         .frame(width: geometryReader.size.width, height: geometryReader.size.height)
                         .background(Color(red: 0.5, green: 0.5, blue: 0.5, opacity: 0.3))
+                        .alert(isPresented: $BLE_manager.peripheralMissing, content: {
+                            peripheralMissingAlert()
+                        })
                     }
                 }
             }

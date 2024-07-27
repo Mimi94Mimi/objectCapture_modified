@@ -57,6 +57,9 @@ class BLE: NSObject, ObservableObject {
     
     @Published var shutter: Bool? = nil
     
+    /// if the peripheral cannot be found within 15 second, returns true
+    @Published var peripheralMissing: Bool = false
+    
     private var centralManager: CBCentralManager?
     private var RPIperipheralManager: CBPeripheralManager?
     private var RPIperipheral: CBPeripheral?
@@ -80,6 +83,31 @@ class BLE: NSObject, ObservableObject {
 
     
     // MARK: - functions related to "finding peripherals"
+    func startScanning() -> Void {
+        DispatchQueue.main.async {
+            self.peripheralMissing = false
+        }
+        centralManager?.scanForPeripherals(withServices: [CBUUIDs.BLEService_UUID])
+        scanTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) {_ in
+            self.stopScanning()
+        }
+    }
+
+    func stopScanning() -> Void {
+        centralManager?.stopScan()
+        DispatchQueue.main.async {
+            guard let RPIperipheral = self.RPIperipheral else {
+                self.peripheralMissing = true
+                return
+            }
+            if (RPIperipheral.state != .connected) {
+                self.peripheralMissing = true
+                return
+            }
+        }
+        
+    }
+    
     private func connectToDevice() -> Void {
         centralManager?.connect(RPIperipheral!, options: nil)
     }
@@ -88,17 +116,6 @@ class BLE: NSObject, ObservableObject {
         if RPIperipheral != nil {
             centralManager?.cancelPeripheralConnection(RPIperipheral!)
         }
-    }
-
-    private func startScanning() -> Void {
-        centralManager?.scanForPeripherals(withServices: [CBUUIDs.BLEService_UUID])
-        scanTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) {_ in
-            self.stopScanning()
-        }
-    }
-
-    private func stopScanning() -> Void {
-        centralManager?.stopScan()
     }
 
     private func delayedConnection() -> Void {
@@ -137,6 +154,9 @@ class BLE: NSObject, ObservableObject {
             logger.log("sendCounterValue failed")
             return
         }
+//        guard let RPIperipheral = self.RPIperipheral, let connectedChar = RPIcharacteristics.connectedChar else {return}
+//        RPIperipheral.readValue(for: connectedChar)
+        
         if (current_RSSI > RSSIbound) {
             connectedCounterValue += 1
             isWaiting = false
@@ -328,6 +348,16 @@ extension BLE: CBPeripheralDelegate {
         }
         cameraService = services[0]
     }
+    
+    func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
+//        guard let services = peripheral.services else { return }
+//        for service in services {
+//            logger.log("\(service.uuid.uuidString)")
+//        }
+//        if (RPIperipheral?.state == .connected){
+//            logger.log("connected")
+//        }
+    }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
 
@@ -362,6 +392,7 @@ extension BLE: CBPeripheralDelegate {
                     break
                     case CBUUIDs.connected_UUID:
                     RPIcharacteristics.connectedChar = characteristic
+                    //peripheral.setNotifyValue(true, for: characteristic)
                     break
                     default:
                     break
@@ -374,15 +405,11 @@ extension BLE: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         var characteristicASCIIValue = NSString()
 
-        guard characteristic == RPIcharacteristics.cameraStateChar || characteristic == RPIcharacteristics.shouldTakePhotoChar,
-        let charValue = characteristic.value,
-        let ASCIIstring = NSString(data: charValue, encoding: String.Encoding.utf8.rawValue) else { return }
+        guard let _charValue = characteristic.value,
+        let _ = self.charValue,
+        let ASCIIstring = NSString(data: _charValue, encoding: String.Encoding.utf8.rawValue) else { return }
 
         characteristicASCIIValue = ASCIIstring
-        
-        guard self.charValue != nil else {
-            return
-        }
         
         if (characteristic.isEqual(RPIcharacteristics.cameraStateChar)){
             DispatchQueue.main.async {
@@ -395,11 +422,41 @@ extension BLE: CBPeripheralDelegate {
             }
             handleShouldTakePhoto("\((characteristicASCIIValue as String))")
         }
-        
+        if (characteristic.isEqual(RPIcharacteristics.connectedChar)){
+//            logger.log("characteristic.isEqual(RPIcharacteristics.connectedChar)")
+//            logger.log("\(characteristicASCIIValue as String)")
+        }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         current_RSSI = RSSI.floatValue
         RPIperipheral?.readRSSI()
+    }
+}
+
+extension BLE: CBPeripheralManagerDelegate {
+    func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        switch peripheral.state {
+        case .poweredOn:
+            print("Peripheral Is Powered On.")
+        case .unsupported:
+            print("Peripheral Is Unsupported.")
+        case .unauthorized:
+        print("Peripheral Is Unauthorized.")
+        case .unknown:
+            print("Peripheral Unknown")
+        case .resetting:
+            print("Peripheral Resetting")
+        case .poweredOff:
+            print("Peripheral Is Powered Off.")
+        @unknown default:
+            print("Error")
+        }
+    }
+
+
+    //Check when someone subscribe to our characteristic, start sending the data
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
+        print("Device subscribe to characteristic")
     }
 }
