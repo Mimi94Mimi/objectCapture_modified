@@ -8,6 +8,9 @@ Helper class for listing, deleting, and viewing app document directory "capture"
 import Combine
 import Foundation
 
+// TODO(UPLOAD)
+import SwiftUI
+
 import os
 
 private let logger = Logger(subsystem: "com.apple.sample.CaptureSample",
@@ -26,6 +29,20 @@ class CaptureFolderState: ObservableObject {
     
     @Published var captureDir: URL? = nil
     @Published var captures: [CaptureInfo] = []
+    
+    // TODO(UPLOAD)
+    @Published var doneLoadImageDatas: Bool = false
+    @Published var RenderedImageDatas: [ImageData] = []
+    
+    private var imageDatas: [ImageData] = [] {
+        didSet {
+            let loadImageDatasDone = (imageDatas.count == captures.count) && (!imageDatas.isEmpty)
+            if loadImageDatasDone {
+                didLoadImageDatas()
+            }
+        }
+    }
+    private var errorImage: UIImage = UIImage(systemName: "xmark.circle")!
     
     private var subscriptions = Set<AnyCancellable>()
     
@@ -54,6 +71,55 @@ class CaptureFolderState: ObservableObject {
             DispatchQueue.main.async {
                 self.captures.removeAll(where: { $0.id == captureInfo.id })
             }
+        }
+    }
+    
+    //TODO(UPLOAD)
+    func loadImageData(url: URL, index: Int) {
+        ImageLoader.loadImage(url: url)
+            .receive(on: DispatchQueue.main)
+            .replaceError(with: errorImage)
+            .sink { image in
+                let tmpImageData = ImageData()
+                tmpImageData.setImage(image: image)
+                tmpImageData.setIndex(index: index)
+                self.imageDatas.append(tmpImageData)
+            }
+            .store(in: &subscriptions)
+    }
+    
+    func loadImageDatas() {
+        if !imageDatas.isEmpty {
+            logger.log("imageData of current folder is not empty.")
+            imageDatas.removeAll()
+            doneLoadImageDatas = false
+        }
+        var curIndex: Int = 1
+        for capture in self.captures {
+            loadImageData(url: capture.imageUrl, index: curIndex)
+            curIndex += 1
+        }
+    }
+    
+    func didLoadImageDatas() {
+        RenderedImageDatas = imageDatas.sorted {$0.index! < $1.index!}
+        doneLoadImageDatas = true
+    }
+    
+    func logImageBase64Strings() {
+        if imageDatas.isEmpty {logger.log("imageData of current folder is empty.")}
+        
+        for imageData in imageDatas {
+            guard let UIimage = imageData.image else {
+                logger.log("the image is nil")
+                return
+            }
+            let _base64String = UIimage.jpegData(compressionQuality: 1)?.base64EncodedString()
+            if _base64String != nil, imageData.index != nil {
+                let base64String = _base64String! as String
+                logger.log("image \(imageData.index!):\n")
+                logger.log("\(base64String)")
+            } else {return}
         }
     }
     

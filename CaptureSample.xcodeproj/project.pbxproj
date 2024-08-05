@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		940E13982C59DA81004FF89A /* RequestUnits.swift in Sources */ = {isa = PBXBuildFile; fileRef = 940E13972C59DA81004FF89A /* RequestUnits.swift */; };
 		9449E6DB2C2EB2EC00F49BDC /* BLEOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9449E6DA2C2EB2EC00F49BDC /* BLEOptionsView.swift */; };
 		9449E6DD2C2EB3D100F49BDC /* BLEService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9449E6DC2C2EB3D100F49BDC /* BLEService.swift */; };
 		94E6401F2C3107D500982CF8 /* BLEProgressingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E6401E2C3107D500982CF8 /* BLEProgressingView.swift */; };
@@ -34,6 +35,7 @@
 /* Begin PBXFileReference section */
 		7BAFE7282618093500D2299C /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		7C6C99F1D4B6E3EBA3A7B7DF /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
+		940E13972C59DA81004FF89A /* RequestUnits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestUnits.swift; sourceTree = "<group>"; };
 		9449E6DA2C2EB2EC00F49BDC /* BLEOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEOptionsView.swift; sourceTree = "<group>"; };
 		9449E6DC2C2EB3D100F49BDC /* BLEService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEService.swift; sourceTree = "<group>"; };
 		94E6401E2C3107D500982CF8 /* BLEProgressingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEProgressingView.swift; sourceTree = "<group>"; };
@@ -120,6 +122,7 @@
 				C9BF99A025E0808D00707ADC /* ImageLoader.swift */,
 				C94968AD25F2C24100540756 /* InfoPanelView.swift */,
 				C96059EB25CA1A5E00FDB64F /* PhotoCaptureDelegate.swift */,
+				940E13972C59DA81004FF89A /* RequestUnits.swift */,
 				C9516ADA25F090FE00DA396D /* TriggerEveryTimer.swift */,
 				C9516AD825F085B200DA396D /* TimerView.swift */,
 				C9E38E1625C8CB5D00171AB3 /* Assets.xcassets */,
@@ -229,6 +232,7 @@
 				C9BA144525EF052300A19324 /* AsyncImageHelpers.swift in Sources */,
 				94E6401F2C3107D500982CF8 /* BLEProgressingView.swift in Sources */,
 				C9605AE525CCB8D800FDB64F /* CameraView.swift in Sources */,
+				940E13982C59DA81004FF89A /* RequestUnits.swift in Sources */,
 				C9516ADB25F090FE00DA396D /* TriggerEveryTimer.swift in Sources */,
 				C9605AE925CCCD1200FDB64F /* Capture.swift in Sources */,
 				C91EEE4B25EDA200009FD603 /* CaptureFoldersView.swift in Sources */,

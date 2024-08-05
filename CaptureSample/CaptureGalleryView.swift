@@ -24,6 +24,9 @@ struct CaptureGalleryView: View {
     /// When this is set to `true`, the app displays a toolbar button to dispays the capture folder.
     @State private var showCaptureFolderView: Bool = false
     
+    // TODO(UPLOAD)
+    @State var showLoadedImages: Bool = false
+    
     /// This property indicates whether the app is currently displaying the capture folder for the live session.
     let usingCurrentCaptureFolder: Bool
     
@@ -99,11 +102,17 @@ struct CaptureGalleryView: View {
                 }
             }
         }
+        //TODO(UPLOAD)
+        .popover(isPresented: $showLoadedImages) {
+            TestLoadedImagesView(captureFolderState: captureFolderState)
+        }
         .navigationTitle(Text("\(captureFolderState.captureDir?.lastPathComponent ?? "NONE")"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(trailing: HStack {
             NewSessionButtonView(model: model, usingCurrentCaptureFolder: usingCurrentCaptureFolder)
                 .padding(.horizontal, 5)
+            //TODO(UPLOAD)
+            UploadButtonView(captureFolderState: captureFolderState, showLoadedImages: $showLoadedImages)
             if usingCurrentCaptureFolder {
                 Button(action: {
                     self.showCaptureFolderView = true
@@ -138,6 +147,24 @@ struct NewSessionButtonView: View {
             }, label: {
                 Image(systemName: "plus.circle")
             })
+        }
+    }
+}
+
+struct UploadButtonView: View {
+    @ObservedObject var captureFolderState: CaptureFolderState
+    @Binding var showLoadedImages: Bool
+    
+    var body: some View{
+        Button {
+            print("Pressed Upload!")
+            self.captureFolderState.loadImageDatas()
+            // self.captureFolderState.logImageBase64Strings()
+            withAnimation {
+                showLoadedImages.toggle()
+            }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
         }
     }
 }
@@ -289,5 +316,33 @@ struct FullSizeImageView: View {
                 .padding(.all)
         }
         .transition(.opacity)
+    }
+}
+
+struct TestLoadedImagesView: View {
+    @ObservedObject var captureFolderState: CaptureFolderState
+    
+    var body: some View {
+        ZStack{
+            Color(red: 0, green: 0, blue: 0.01, opacity: 1.0)
+                .edgesIgnoringSafeArea(/*@START_MENU_TOKEN@*/.all/*@END_MENU_TOKEN@*/)
+            if (captureFolderState.doneLoadImageDatas){
+                ScrollView(.horizontal) {
+                    HStack {
+                        ForEach(captureFolderState.RenderedImageDatas, id: \.index) { imageData in
+                            if(imageData.image != nil){
+                                VStack{
+                                    Image(uiImage: imageData.image!)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 300, height: 300)
+                                    Text("\(Int(imageData.image!.size.width)) x \(Int(imageData.image!.size.height))").foregroundColor(Color.white)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

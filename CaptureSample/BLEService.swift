@@ -348,16 +348,6 @@ extension BLE: CBPeripheralDelegate {
         }
         cameraService = services[0]
     }
-    
-    func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-//        guard let services = peripheral.services else { return }
-//        for service in services {
-//            logger.log("\(service.uuid.uuidString)")
-//        }
-//        if (RPIperipheral?.state == .connected){
-//            logger.log("connected")
-//        }
-    }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
 
